@@ -2,6 +2,22 @@
 
 import React, { useState } from "react";
 import { ShipmentEvent, BoundingBox } from "@/types/reconciliation";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  FileText,
+  Layers,
+  Eye,
+  CheckCircle2,
+  AlertTriangle,
+  FileCheck2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface EvidenceViewerProps {
   event: ShipmentEvent;
@@ -100,53 +116,52 @@ export function EvidenceViewer({
       list.push({
         id: "sj_weight",
         fieldName: "weight_actual_kg",
-        label: "Berat Timbangan Fisik",
+        label: "Berat Timbangan Fisik Gudang",
         rawValue: `${event.shipment.weight_actual_kg} kg`,
         normalizedValue: `${event.shipment.weight_actual_kg}`,
-        confidence: 0.98,
-        bbox: event.shipment.field_evidence?.weight_actual?.bbox || { x1: 0.60, y1: 0.45, x2: 0.88, y2: 0.51 },
-        isDiscrepant: false,
+        confidence: 0.95,
+        bbox: event.shipment.field_evidence?.weight_actual_kg?.bbox || { x1: 0.55, y1: 0.40, x2: 0.85, y2: 0.46 },
+        isDiscrepant: event.reconciliation.discrepancies.some((d) => d.code === "WEIGHT_DISCREPANCY"),
         isUncertain: false,
       });
 
-      const isQtyMismatch = event.reconciliation.discrepancies.some((d) => d.code === "QUANTITY_MISMATCH");
       list.push({
-        id: "sj_qty",
-        fieldName: "total_packages",
-        label: "Jumlah Koli Muat (Dispatch)",
-        rawValue: `${event.shipment.total_packages} koli`,
-        normalizedValue: `${event.shipment.total_packages}`,
-        confidence: 0.95,
-        bbox: { x1: 0.20, y1: 0.45, x2: 0.45, y2: 0.51 },
-        isDiscrepant: isQtyMismatch,
+        id: "sj_dest",
+        fieldName: "destination",
+        label: "Destinasi Fisik Surat Jalan",
+        rawValue: event.shipment.destination,
+        normalizedValue: event.shipment.destination,
+        confidence: 0.98,
+        bbox: event.shipment.field_evidence?.destination?.bbox || { x1: 0.35, y1: 0.32, x2: 0.65, y2: 0.38 },
+        isDiscrepant: event.reconciliation.discrepancies.some((d) => d.code === "WRONG_ZONE"),
         isUncertain: false,
       });
     } else if (activeDocumentTab === "POD") {
+      const isMissingSig = event.reconciliation.discrepancies.some((d) => d.code === "MISSING_SIGNATURE");
+      const isDateMismatch = event.reconciliation.discrepancies.some((d) => d.code === "DATE_MISMATCH");
       const isQtyMismatch = event.reconciliation.discrepancies.some((d) => d.code === "QUANTITY_MISMATCH");
-      const isMissingSig = event.reconciliation.discrepancies.some((d) => d.code === "SIGNATURE_MISSING");
-      const isDateMismatch = event.reconciliation.discrepancies.some((d) => d.code === "POD_DATE_MISMATCH");
 
       if (event.pod.quantity_received !== undefined && event.pod.quantity_received !== null) {
         list.push({
           id: "pod_qty",
           fieldName: "quantity_received",
-          label: "Jumlah Koli Diterima Fisik",
-          rawValue: `${event.pod.quantity_received} koli`,
+          label: "Jumlah Koli Diterima (Received Qty)",
+          rawValue: `${event.pod.quantity_received} Koli`,
           normalizedValue: `${event.pod.quantity_received}`,
-          confidence: 0.96,
-          bbox: event.pod.field_evidence?.quantity_received?.bbox || { x1: 0.20, y1: 0.48, x2: 0.50, y2: 0.54 },
+          confidence: 0.94,
+          bbox: event.pod.field_evidence?.quantity_received?.bbox || { x1: 0.20, y1: 0.45, x2: 0.50, y2: 0.52 },
           isDiscrepant: isQtyMismatch,
           isUncertain: false,
         });
       } else {
         list.push({
-          id: "pod_qty_none",
+          id: "pod_qty_missing",
           fieldName: "quantity_received",
-          label: "Jumlah Koli Diterima",
-          rawValue: "None / Not Specified",
+          label: "Jumlah Koli Fisik (Not Stated on POD)",
+          rawValue: "TIDAK TERCANTUM PADA BUKTI POD",
           normalizedValue: "null",
-          confidence: 0.50,
-          bbox: { x1: 0.20, y1: 0.48, x2: 0.50, y2: 0.54 },
+          confidence: 0.0,
+          bbox: { x1: 0.20, y1: 0.45, x2: 0.65, y2: 0.52 },
           isDiscrepant: false,
           isUncertain: true,
         });
@@ -232,85 +247,83 @@ export function EvidenceViewer({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg border border-[#CFE3F1] shadow-xs overflow-hidden">
+    <Card className="flex flex-col h-full bg-white border border-slate-200 shadow-2xs overflow-hidden p-0">
       {/* Document Tab Bar */}
-      <div className="flex items-center justify-between border-b border-[#CFE3F1] bg-[#EDF4FA] px-3 py-2">
-        <div className="flex items-center gap-1">
-          <button
+      <CardHeader className="p-2.5 border-b border-slate-100 bg-[#EDF4FA]/70 flex flex-row items-center justify-between">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <Button
+            size="sm"
+            variant={activeDocumentTab === "INVOICE" ? "default" : "ghost"}
             onClick={() => onTabChange("INVOICE")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-subtle ${
-              activeDocumentTab === "INVOICE"
-                ? "bg-white text-[#243A5E] shadow-xs border border-[#CFE3F1]"
-                : "text-[#5F86A6] hover:text-[#243A5E]"
-            }`}
+            className="text-xs h-7 px-2.5 font-bold"
           >
             Invoice (Faktur)
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant={activeDocumentTab === "SURAT_JALAN" ? "default" : "ghost"}
             onClick={() => onTabChange("SURAT_JALAN")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-subtle ${
-              activeDocumentTab === "SURAT_JALAN"
-                ? "bg-white text-[#243A5E] shadow-xs border border-[#CFE3F1]"
-                : "text-[#5F86A6] hover:text-[#243A5E]"
-            }`}
+            className="text-xs h-7 px-2.5 font-bold"
           >
-            Surat Jalan (SJ)
-          </button>
-          <button
+            Surat Jalan
+          </Button>
+          <Button
+            size="sm"
+            variant={activeDocumentTab === "POD" ? "default" : "ghost"}
             onClick={() => onTabChange("POD")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-subtle ${
-              activeDocumentTab === "POD"
-                ? "bg-white text-[#243A5E] shadow-xs border border-[#CFE3F1]"
-                : "text-[#5F86A6] hover:text-[#243A5E]"
-            }`}
+            className="text-xs h-7 px-2.5 font-bold"
           >
-            POD (Tanda Terima)
-          </button>
-          <button
+            POD (Bukti Kirim)
+          </Button>
+          <Button
+            size="sm"
+            variant={activeDocumentTab === "RATE_AGREEMENT" ? "default" : "ghost"}
             onClick={() => onTabChange("RATE_AGREEMENT")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-subtle ${
-              activeDocumentTab === "RATE_AGREEMENT"
-                ? "bg-white text-[#243A5E] shadow-xs border border-[#CFE3F1]"
-                : "text-[#5F86A6] hover:text-[#243A5E]"
-            }`}
+            className="text-xs h-7 px-2.5 font-bold"
           >
-            Rate Agreement (PKS)
-          </button>
+            Rate Card (PKS)
+          </Button>
         </div>
 
         {/* Zoom Controls */}
-        <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-[#CFE3F1] shadow-2xs">
-          <button
-            onClick={() => setZoomLevel((z) => Math.max(70, z - 15))}
-            className="p-1 text-[#5F86A6] hover:text-[#243A5E] text-xs font-bold"
+        <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setZoomLevel((z) => Math.max(z - 15, 60))}
+            className="h-6 w-6 text-slate-600 hover:text-slate-900"
             title="Zoom Out"
           >
-            −
-          </button>
-          <span className="font-mono text-[11px] text-[#243A5E] font-medium w-9 text-center">
+            <ZoomOut className="h-3 w-3" />
+          </Button>
+          <span className="text-[10px] font-mono font-bold text-slate-700 w-8 text-center">
             {zoomLevel}%
           </span>
-          <button
-            onClick={() => setZoomLevel((z) => Math.min(150, z + 15))}
-            className="p-1 text-[#5F86A6] hover:text-[#243A5E] text-xs font-bold"
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setZoomLevel((z) => Math.min(z + 15, 160))}
+            className="h-6 w-6 text-slate-600 hover:text-slate-900"
             title="Zoom In"
           >
-            +
-          </button>
-          <button
+            <ZoomIn className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setZoomLevel(100)}
-            className="ml-1 pl-1 border-l border-slate-200 text-[10px] text-[#5F86A6] hover:text-[#243A5E]"
+            className="h-6 px-1.5 text-[10px] text-[#5F86A6] hover:text-[#243A5E]"
           >
             Reset
-          </button>
+          </Button>
         </div>
-      </div>
+      </CardHeader>
 
       {/* Document View Canvas Area */}
-      <div className="flex-1 p-4 bg-slate-100/70 overflow-auto flex items-start justify-center relative min-h-[480px]">
+      <CardContent className="flex-1 p-4 bg-slate-100/70 overflow-auto flex items-start justify-center relative min-h-[480px]">
         <div
           style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: "top center" }}
-          className="w-[520px] bg-white rounded shadow-md border border-slate-300 p-6 relative select-none transition-subtle"
+          className="w-[520px] bg-white rounded-xl shadow-md border border-slate-300 p-6 relative select-none transition-all"
         >
           {/* Simulated Physical Document Header */}
           <div className="border-b-2 border-slate-800 pb-3 mb-4">
@@ -331,9 +344,9 @@ export function EvidenceViewer({
                 </p>
               </div>
               <div className="text-right">
-                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                <Badge variant="outline" className="text-[10px] font-mono font-bold bg-slate-50">
                   PAGE 1 OF 1
-                </span>
+                </Badge>
               </div>
             </div>
           </div>
@@ -341,7 +354,7 @@ export function EvidenceViewer({
           {/* Document Content Simulation */}
           <div className="space-y-4 text-xs text-slate-700 font-sans leading-relaxed">
             {/* Meta Key-Values */}
-            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded border border-slate-200">
+            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
               <div>
                 <div className="text-[10px] text-slate-500 uppercase">Vendor / Transporter</div>
                 <div className="font-semibold text-slate-800">{event.vendor_id}</div>
@@ -362,7 +375,7 @@ export function EvidenceViewer({
 
             {/* Document Specific Simulation Table */}
             {activeDocumentTab === "INVOICE" && (
-              <div className="border border-slate-200 rounded overflow-hidden">
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <table className="w-full text-left text-[11px]">
                   <thead className="bg-slate-100 border-b border-slate-200 font-semibold text-slate-800">
                     <tr>
@@ -383,7 +396,7 @@ export function EvidenceViewer({
             )}
 
             {activeDocumentTab === "SURAT_JALAN" && (
-              <div className="border border-slate-200 rounded p-3 bg-slate-50 space-y-2">
+              <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Nomor Resi / AWB:</span>
                   <span className="font-mono font-semibold">{event.shipment.awb_number || "AWB-2026-001"}</span>
@@ -400,7 +413,7 @@ export function EvidenceViewer({
             )}
 
             {activeDocumentTab === "POD" && (
-              <div className="border border-slate-200 rounded p-3 bg-slate-50 space-y-3">
+              <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-3">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Status Serah Terima:</span>
                   <span className="font-semibold text-emerald-700">{event.pod.delivery_status}</span>
@@ -418,7 +431,7 @@ export function EvidenceViewer({
                     <div className="text-[10px] text-slate-500">Penerima & Stempel</div>
                     <div className="font-medium text-slate-800">Gudang Penerima Retail</div>
                   </div>
-                  <div className="border-2 border-dashed border-slate-300 rounded p-2 text-center w-28 h-14 flex items-center justify-center bg-white">
+                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-2 text-center w-28 h-14 flex items-center justify-center bg-white">
                     {event.pod.signature_present ? (
                       <span className="text-[10px] font-bold text-indigo-700">✓ TTD & CAP BASAH</span>
                     ) : (
@@ -430,7 +443,7 @@ export function EvidenceViewer({
             )}
 
             {activeDocumentTab === "RATE_AGREEMENT" && (
-              <div className="border border-slate-200 rounded overflow-hidden">
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <table className="w-full text-left text-[11px]">
                   <thead className="bg-slate-100 border-b border-slate-200 font-semibold text-slate-800">
                     <tr>
@@ -453,106 +466,74 @@ export function EvidenceViewer({
             )}
           </div>
 
-          {/* SPATIAL BOUNDING BOX OVERLAYS */}
-          <div className="absolute inset-0 pointer-events-none">
-            {activeBBoxes.map((box) => {
-              const isSelected = inspectedBBox?.id === box.id;
-              const left = `${box.bbox.x1 * 100}%`;
-              const top = `${box.bbox.y1 * 100}%`;
-              const width = `${(box.bbox.x2 - box.bbox.x1) * 100}%`;
-              const height = `${(box.bbox.y2 - box.bbox.y1) * 100}%`;
+          {/* Interactive Bounding Boxes Overlay */}
+          {activeBBoxes.map((box) => {
+            const isSelected = (selectedField === box.fieldName) || (inspectedBBox?.id === box.id);
+            const style: React.CSSProperties = {
+              position: "absolute",
+              left: `${box.bbox.x1 * 100}%`,
+              top: `${box.bbox.y1 * 100}%`,
+              width: `${(box.bbox.x2 - box.bbox.x1) * 100}%`,
+              height: `${(box.bbox.y2 - box.bbox.y1) * 100}%`,
+            };
 
-              let boxColorClasses = "border-emerald-500 bg-emerald-500/10 text-emerald-800";
-              if (box.isDiscrepant) {
-                boxColorClasses = "border-rose-600 bg-rose-600/15 text-rose-800 ring-2 ring-rose-500/30 animate-pulse";
-              } else if (box.isUncertain) {
-                boxColorClasses = "border-amber-500 border-dashed bg-amber-500/10 text-amber-800";
-              }
-              if (isSelected) {
-                boxColorClasses = "border-[#243A5E] bg-[#8FB8D6]/30 text-[#243A5E] ring-2 ring-[#243A5E]";
-              }
+            let borderColor = "border-sky-500 bg-sky-500/10";
+            if (box.isDiscrepant) {
+              borderColor = "border-rose-600 bg-rose-500/20 animate-pulse";
+            } else if (box.isUncertain) {
+              borderColor = "border-amber-500 bg-amber-500/20";
+            }
 
-              return (
-                <div
-                  key={box.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleBBoxClick(box);
-                  }}
-                  style={{ left, top, width, height }}
-                  className={`absolute pointer-events-auto cursor-pointer border-2 rounded transition-subtle group ${boxColorClasses}`}
+            if (isSelected) {
+              borderColor = "border-[#243A5E] bg-[#5F86A6]/30 ring-2 ring-[#243A5E]";
+            }
+
+            return (
+              <div
+                key={box.id}
+                style={style}
+                onClick={() => handleBBoxClick(box)}
+                className={cn(
+                  "border-2 rounded cursor-pointer transition-all duration-150 group z-20 flex items-start justify-end p-0.5",
+                  borderColor
+                )}
+                title={`${box.label}: ${box.rawValue} (Conf: ${(box.confidence * 100).toFixed(1)}%)`}
+              >
+                <Badge
+                  variant={box.isDiscrepant ? "destructive" : "default"}
+                  className="text-[9px] px-1 py-0 font-mono scale-90 origin-top-right shadow-2xs"
                 >
-                  <span
-                    className={`absolute -top-5 left-0 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shadow-xs whitespace-nowrap ${
-                      box.isDiscrepant
-                        ? "bg-rose-600 text-white"
-                        : isSelected
-                        ? "bg-[#243A5E] text-white"
-                        : "bg-white text-slate-800 border border-slate-300"
-                    }`}
-                  >
-                    {box.label} ({(box.confidence * 100).toFixed(0)}%)
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                  {(box.confidence * 100).toFixed(0)}%
+                </Badge>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </CardContent>
 
-      {/* Bounding Box Evidence Inspector Popover */}
+      {/* Inspected Bounding Box Info Panel */}
       {currentInspectedBBox && (
-        <div className="border-t border-[#CFE3F1] bg-white p-3.5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-2.5 h-2.5 rounded-full ${
-                currentInspectedBBox.isDiscrepant
-                  ? "bg-rose-600 animate-ping"
-                  : currentInspectedBBox.isUncertain
-                  ? "bg-amber-500"
-                  : "bg-emerald-600"
-              }`}
-            />
-            <div>
-              <div className="text-xs font-bold text-[#243A5E] flex items-center gap-2">
-                <span>{currentInspectedBBox.label}</span>
-                <span className="font-mono text-[10px] text-[#5F86A6]">[{currentInspectedBBox.fieldName}]</span>
-                {currentInspectedBBox.isDiscrepant && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-700 rounded border border-rose-200">
-                    DISCREPANCY DETECTED
-                  </span>
-                )}
-                {currentInspectedBBox.isUncertain && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded border border-amber-200">
-                    UNCERTAIN EVIDENCE
-                  </span>
-                )}
-              </div>
-              <div className="text-[11px] text-slate-600 mt-0.5 flex items-center gap-3">
-                <span>
-                  Extracted: <strong className="text-slate-900 font-mono">{currentInspectedBBox.rawValue}</strong>
-                </span>
-                <span>•</span>
-                <span>
-                  Confidence:{" "}
-                  <strong className="font-mono font-semibold text-slate-900">
-                    {(currentInspectedBBox.confidence * 100).toFixed(1)}%
-                  </strong>
-                </span>
-                <span>•</span>
-                <span>Page 1</span>
-              </div>
-            </div>
+        <div className="p-3 bg-white border-t border-slate-200 text-xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={currentInspectedBBox.isDiscrepant ? "destructive" : "success"}
+              className="text-[10px] font-bold"
+            >
+              {currentInspectedBBox.isDiscrepant ? "DISCREPANCY" : "MATCHED EVIDENCE"}
+            </Badge>
+            <span className="font-bold text-slate-800">{currentInspectedBBox.label}:</span>
+            <span className="font-mono text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
+              {currentInspectedBBox.rawValue}
+            </span>
           </div>
 
-          <button
-            onClick={() => setInspectedBBox(null)}
-            className="text-xs text-[#5F86A6] hover:text-[#243A5E] font-medium"
-          >
-            Dismiss
-          </button>
+          <div className="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
+            <span>OCR Confidence: {(currentInspectedBBox.confidence * 100).toFixed(1)}%</span>
+            <span>•</span>
+            <span>BBox: [{(currentInspectedBBox.bbox.x1).toFixed(2)}, {(currentInspectedBBox.bbox.y1).toFixed(2)}]</span>
+          </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

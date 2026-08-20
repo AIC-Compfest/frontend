@@ -1,381 +1,447 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { QueueItem, QueueSummary, ReconciliationStatus } from "@/types/reconciliation";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Search,
+  RotateCw,
+  Filter,
+  Inbox,
+  AlertTriangle,
+  CheckCircle2,
+  ArrowRight,
+  Clock,
+  TrendingDown,
+  DollarSign,
+  Sparkles,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ReviewQueueProps {
-  items: QueueItem[];
-  summary: QueueSummary;
   selectedEventId: string | null;
   onSelectTransaction: (eventId: string) => void;
-  isLoading: boolean;
-  onRefresh: () => void;
+  onRefresh?: () => void;
 }
 
+const API_BASE = "http://localhost:8080/api/v1";
+
 export function ReviewQueue({
-  items,
-  summary,
   selectedEventId,
   onSelectTransaction,
-  isLoading,
   onRefresh,
 }: ReviewQueueProps) {
+  const [items, setItems] = useState<QueueItem[]>([]);
+  const [summary, setSummary] = useState<QueueSummary>({
+    total_invoiced_amount: 0,
+    total_variance_amount: 0,
+    total_invoices_count: 0,
+    open_exceptions_count: 0,
+    urgent_disputes_count: 0,
+    matches_count: 0,
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [vendorFilter, setVendorFilter] = useState<string>("ALL");
   const [severityFilter, setSeverityFilter] = useState<string>("ALL");
 
-  const formatIDR = (val: number) => {
+  const formatIDR = (val?: number | null) => {
+    const num = val ?? 0;
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
-    }).format(val);
+    }).format(num);
   };
 
-  const formatCompactIDR = (val: number) => {
+  const formatCompactIDR = (val?: number | null) => {
+    if (val === undefined || val === null || isNaN(val)) return "Rp 0";
     if (val >= 1_000_000_000) return `Rp ${(val / 1_000_000_000).toFixed(1)}M`;
     if (val >= 1_000_000) return `Rp ${(val / 1_000_000).toFixed(1)} jt`;
     if (val >= 1_000) return `Rp ${(val / 1_000).toFixed(0)} rb`;
-    return `Rp ${val}`;
+    return `Rp ${val.toLocaleString("id-ID")}`;
   };
 
-  // Unique vendors for filter
+  // Fetch Queue from Database targeted with exact params
+  const fetchQueueData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (severityFilter !== "ALL") params.set("severity", severityFilter);
+      if (vendorFilter !== "ALL") params.set("vendor", vendorFilter);
+      if (search.trim() !== "") params.set("search", search.trim());
+      params.set("page_size", "50");
+
+      const res = await fetch(`${API_BASE}/reconcile/queue?${params.toString()}`);
+      if (!res.ok) throw new Error("Gagal mengambil data antrean");
+      const data = await res.json();
+      setItems(data.items || []);
+      if (data.summary) {
+        setSummary(data.summary);
+      }
+    } catch (err) {
+      console.error("Queue fetch error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [statusFilter, severityFilter, vendorFilter, search]);
+
+  useEffect(() => {
+    fetchQueueData();
+  }, [fetchQueueData]);
+
+  // Unique vendors from items
   const vendors = useMemo(() => {
     const set = new Set(items.map((i) => i.vendor_id));
     return Array.from(set);
   }, [items]);
 
-  // Client-side filtering
-  const filteredItems = useMemo(() => {
-    return items.filter((item) => {
-      if (statusFilter !== "ALL" && item.status !== statusFilter) return false;
-      if (vendorFilter !== "ALL" && item.vendor_id !== vendorFilter) return false;
-      if (severityFilter !== "ALL" && item.priority_level !== severityFilter) return false;
-      if (search.trim() !== "") {
-        const q = search.toLowerCase();
-        const inv = item.invoice_number.toLowerCase();
-        const shp = item.shipment_id.toLowerCase();
-        const vName = item.vendor_name.toLowerCase();
-        const disc = (item.primary_discrepancy || "").toLowerCase();
-        if (!inv.includes(q) && !shp.includes(q) && !vName.includes(q) && !disc.includes(q)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [items, statusFilter, vendorFilter, severityFilter, search]);
-
-  const getStatusBadge = (status: ReconciliationStatus) => {
+  const renderStatusBadge = (status: ReconciliationStatus) => {
     switch (status) {
       case "MATCH":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <Badge variant="success" className="text-[10px] font-bold py-0">
             MATCH
-          </span>
+          </Badge>
         );
       case "EXCEPTION":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+          <Badge variant="destructive" className="text-[10px] font-bold py-0">
             EXCEPTION
-          </span>
+          </Badge>
         );
       case "DUPLICATE":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <Badge variant="brand" className="text-[10px] font-bold py-0">
             DUPLICATE
-          </span>
+          </Badge>
+        );
+      case "APPROVED":
+        return (
+          <Badge variant="success" className="text-[10px] font-bold py-0 bg-emerald-600 text-white">
+            APPROVED
+          </Badge>
         );
       case "INSUFFICIENT_EVIDENCE":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          <Badge variant="warning" className="text-[10px] font-bold py-0">
             UNCONFIRMED
-          </span>
+          </Badge>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+          <Badge variant="outline" className="text-[10px] font-bold py-0">
             {status}
-          </span>
+          </Badge>
         );
     }
   };
 
-  const getPriorityBadge = (score: number, level: string) => {
-    if (level === "HIGH") {
-      return (
-        <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></span>
-          HIGH ({score.toFixed(0)})
-        </span>
-      );
-    }
-    if (level === "MEDIUM") {
-      return (
-        <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-          MED ({score.toFixed(0)})
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-        LOW ({score.toFixed(0)})
-      </span>
-    );
-  };
+  const totalInvoiced = summary?.total_invoiced_amount ?? (summary as any)?.total_billed_idr ?? 0;
+  const totalVariance = summary?.total_variance_amount ?? (summary as any)?.total_variance_idr ?? 0;
+  const totalInvoicesCount = summary?.total_invoices_count ?? items.length;
+  const openExceptionsCount = summary?.open_exceptions_count ?? 0;
+  const urgentDisputesCount = summary?.urgent_disputes_count ?? 0;
+  const matchesCount = summary?.matches_count ?? 0;
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Top Header & Refresh */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-[#243A5E] tracking-tight">Invoice Reconciliation Queue</h1>
-          <p className="text-xs text-[#5F86A6] mt-0.5">
-            Audit 3PL billing anomalies, verify spatial evidence, and resolve discrepancies.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#243A5E] bg-white border border-[#CFE3F1] rounded-md hover:bg-[#EDF4FA] transition-subtle shadow-xs"
-          >
-            <svg
-              className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-[#5F86A6]" : "text-[#5F86A6]"}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <div className="space-y-6 max-w-7xl font-sans">
+      {/* 4 KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI 1: Invoiced Spend */}
+        <Card className="border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all bg-white rounded-2xl">
+          <CardHeader className="p-4 pb-1 space-y-0.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Total Invoiced Spend
+            </span>
+            <CardTitle className="text-xl font-extrabold text-slate-900 tracking-tight font-tabular">
+              {formatCompactIDR(totalInvoiced)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 text-[11px] text-slate-500 flex items-center gap-1.5">
+            <DollarSign className="h-3.5 w-3.5 text-[#243A5E]" />
+            <span>Dari {totalInvoicesCount} total tagihan di-audit</span>
+          </CardContent>
+        </Card>
+
+        {/* KPI 2: Total Variance */}
+        <Card className="border border-rose-200/80 bg-rose-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
+          <CardHeader className="p-4 pb-1 space-y-0.5">
+            <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
+              <span>Potensi Kebocoran (Overcharge)</span>
+              <TrendingDown className="h-3.5 w-3.5 text-rose-600" />
+            </span>
+            <CardTitle className="text-xl font-extrabold text-rose-950 tracking-tight font-tabular">
+              +{formatCompactIDR(totalVariance)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 text-[11px] text-rose-700">
+            <span>Total selisih tarif dari kontrak PKS</span>
+          </CardContent>
+        </Card>
+
+        {/* KPI 3: Open Exceptions */}
+        <Card className="border border-amber-200/80 bg-amber-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
+          <CardHeader className="p-4 pb-1 space-y-0.5">
+            <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
+              <span>Antrean Anomali Aktif</span>
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+            </span>
+            <CardTitle className="text-xl font-extrabold text-amber-950 tracking-tight font-tabular">
+              {openExceptionsCount} Kasus
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 text-[11px] text-amber-700 flex items-center gap-1">
+            <Clock className="h-3 w-3 text-amber-600" />
+            <span>{urgentDisputesCount} kasus sisa waktu &le; 7 hari</span>
+          </CardContent>
+        </Card>
+
+        {/* KPI 4: Clean Matches */}
+        <Card className="border border-emerald-200/80 bg-emerald-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
+          <CardHeader className="p-4 pb-1 space-y-0.5">
+            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+              <span>Clean Matches / Siap Bayar</span>
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            </span>
+            <CardTitle className="text-xl font-extrabold text-emerald-950 tracking-tight font-tabular">
+              {matchesCount} Tagihan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 text-[11px] text-emerald-700">
+            <span>100% cocok dengan tarif &amp; bukti POD</span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filter & Table Area */}
+      <Card className="border border-slate-200/90 shadow-2xs bg-white rounded-2xl overflow-hidden">
+        {/* Toolbar & Filter Bar */}
+        <CardHeader className="p-4 pb-3 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[260px]">
+            <Search className="h-4 w-4 absolute left-3 top-2.5 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Cari nomor invoice, shipment ID, atau vendor..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-8.5 text-xs bg-white border-slate-200 rounded-xl"
+            />
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-8.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 cursor-pointer"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            <span>{isLoading ? "Syncing..." : "Refresh Queue"}</span>
-          </button>
-        </div>
-      </div>
+              <option value="ALL">Semua Status</option>
+              <option value="EXCEPTION">Exception (Anomali)</option>
+              <option value="MATCH">Match (Cocok)</option>
+              <option value="APPROVED">Approved (Sah)</option>
+              <option value="DUPLICATE">Duplicate</option>
+              <option value="INSUFFICIENT_EVIDENCE">Unconfirmed</option>
+            </select>
 
-      {/* KPI Summary Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-lg border border-[#CFE3F1] shadow-xs">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-[#5F86A6]">Total Invoiced</div>
-          <div className="mt-1 flex items-baseline justify-between">
-            <div className="text-lg font-bold font-tabular text-[#243A5E]">
-              {formatCompactIDR(summary.total_invoiced_amount)}
-            </div>
-            <span className="text-[11px] font-medium text-slate-500">{summary.total_invoices_count} invoices</span>
+            {/* Severity Filter */}
+            <select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              className="h-8.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 cursor-pointer"
+            >
+              <option value="ALL">Semua Tingkat Risiko</option>
+              <option value="HIGH">Risiko Tinggi (HIGH)</option>
+              <option value="MEDIUM">Risiko Sedang (MEDIUM)</option>
+              <option value="LOW">Risiko Rendah (LOW)</option>
+            </select>
+
+            {/* Vendor Filter */}
+            <select
+              value={vendorFilter}
+              onChange={(e) => setVendorFilter(e.target.value)}
+              className="h-8.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 cursor-pointer"
+            >
+              <option value="ALL">Semua Vendor</option>
+              {vendors.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+
+            {/* Refresh */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchQueueData}
+              disabled={isLoading}
+              className="h-8.5 px-2.5 text-xs font-semibold bg-white border-slate-200 rounded-xl cursor-pointer"
+            >
+              <RotateCw className={`h-3.5 w-3.5 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
+            </Button>
           </div>
-        </div>
+        </CardHeader>
 
-        <div className="bg-white p-3.5 rounded-lg border border-[#CFE3F1] shadow-xs">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-[#5F86A6]">Financial Exposure</div>
-          <div className="mt-1 flex items-baseline justify-between">
-            <div className="text-lg font-bold font-tabular text-rose-600">
-              {formatCompactIDR(summary.total_variance_amount)}
+        {/* Table Body */}
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-16 text-center text-xs text-slate-500 space-y-2">
+              <div className="animate-spin w-6 h-6 border-2 border-[#1B2A4A] border-t-transparent rounded-full mx-auto" />
+              <span>Memuat antrean rekonsiliasi dari database Supabase...</span>
             </div>
-            <span className="text-[11px] font-medium text-rose-600 font-semibold">Overcharge Risk</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-lg border border-[#CFE3F1] shadow-xs">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-[#5F86A6]">Open Exceptions</div>
-          <div className="mt-1 flex items-baseline justify-between">
-            <div className="text-lg font-bold font-tabular text-[#243A5E]">
-              {summary.open_exceptions_count}
+          ) : items.length === 0 ? (
+            <div className="p-16 text-center text-xs text-slate-400 space-y-2">
+              <Inbox className="h-8 w-8 text-slate-300 mx-auto" />
+              <p>Tidak ada transaksi yang cocok dengan filter pencarian.</p>
             </div>
-            <span className="text-[11px] font-medium text-amber-600">Needs Review</span>
-          </div>
-        </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Prioritas</th>
+                    <th className="py-3 px-3">Nomor Faktur / Ref</th>
+                    <th className="py-3 px-3">Mitra 3PL</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-3">Temuan Utama</th>
+                    <th className="py-3 px-3">Nilai Tagih</th>
+                    <th className="py-3 px-3">Ekspektasi</th>
+                    <th className="py-3 px-3">Selisih</th>
+                    <th className="py-3 px-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {items.map((item) => {
+                    const isSelected = selectedEventId === item.event_id;
+                    const isOvercharge = item.variance_amount > 0;
 
-        <div className="bg-white p-3.5 rounded-lg border border-[#CFE3F1] shadow-xs">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-[#5F86A6]">Urgent Disputes</div>
-          <div className="mt-1 flex items-baseline justify-between">
-            <div className="text-lg font-bold font-tabular text-rose-600">
-              {summary.urgent_disputes_count}
-            </div>
-            <span className="text-[11px] font-medium text-rose-600">≤ 7 Days Left</span>
-          </div>
-        </div>
-      </div>
+                    return (
+                      <tr
+                        key={item.event_id}
+                        onClick={() => onSelectTransaction(item.event_id)}
+                        className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
+                          isSelected ? "bg-[#EDF4FA]/70 font-semibold" : ""
+                        }`}
+                      >
+                        {/* Priority Score */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`inline-block w-2 h-2 rounded-full ${
+                                item.priority_level === "HIGH"
+                                  ? "bg-rose-500"
+                                  : item.priority_level === "MEDIUM"
+                                  ? "bg-amber-500"
+                                  : "bg-emerald-500"
+                              }`}
+                            />
+                            <span className="font-mono text-xs font-bold text-slate-700">
+                              {item.priority_score.toFixed(0)}
+                            </span>
+                          </div>
+                        </td>
 
-      {/* Filter & Search Bar */}
-      <div className="bg-white p-3 rounded-lg border border-[#CFE3F1] flex flex-wrap items-center justify-between gap-3 shadow-xs">
-        <div className="flex-1 min-w-[240px] relative">
-          <svg
-            className="w-4 h-4 text-[#5F86A6] absolute left-3 top-1/2 -translate-y-1/2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search invoice number, shipment ID, vendor, or discrepancy..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs text-[#243A5E] placeholder-[#5F86A6]/70 bg-[#EDF4FA]/50 border border-[#CFE3F1] rounded-md focus:outline-none focus:ring-1 focus:ring-[#5F86A6] focus:bg-white transition-subtle"
-          />
-        </div>
+                        {/* Invoice & Shipment */}
+                        <td className="py-3 px-3">
+                          <div className="min-w-0">
+                            <span className="font-extrabold text-slate-900 font-mono block">
+                              {item.invoice_number}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono block truncate max-w-[140px]">
+                              {item.shipment_id}
+                            </span>
+                          </div>
+                        </td>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs text-[#243A5E] bg-white border border-[#CFE3F1] rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#5F86A6]"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="EXCEPTION">Exceptions Only</option>
-            <option value="MATCH">Matches Only</option>
-            <option value="DUPLICATE">Duplicates</option>
-            <option value="INSUFFICIENT_EVIDENCE">Insufficient Evidence</option>
-          </select>
-
-          {/* Severity Filter */}
-          <select
-            value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value)}
-            className="text-xs text-[#243A5E] bg-white border border-[#CFE3F1] rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#5F86A6]"
-          >
-            <option value="ALL">All Priority Levels</option>
-            <option value="HIGH">High Priority (≥ 70)</option>
-            <option value="MEDIUM">Medium Priority (40-69)</option>
-            <option value="LOW">Low Priority (&lt; 40)</option>
-          </select>
-
-          {/* Vendor Filter */}
-          <select
-            value={vendorFilter}
-            onChange={(e) => setVendorFilter(e.target.value)}
-            className="text-xs text-[#243A5E] bg-white border border-[#CFE3F1] rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#5F86A6]"
-          >
-            <option value="ALL">All 3PL Vendors</option>
-            {vendors.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Main Review Table */}
-      <div className="bg-white rounded-lg border border-[#CFE3F1] shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#EDF4FA] border-b border-[#CFE3F1] text-[#243A5E] font-semibold">
-              <tr>
-                <th className="py-2.5 px-3">Priority</th>
-                <th className="py-2.5 px-3">Invoice No.</th>
-                <th className="py-2.5 px-3">Vendor</th>
-                <th className="py-2.5 px-3">Shipment Ref</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3">Discrepancy</th>
-                <th className="py-2.5 px-3 text-right font-tabular">Billed</th>
-                <th className="py-2.5 px-3 text-right font-tabular">Expected</th>
-                <th className="py-2.5 px-3 text-right font-tabular">Variance</th>
-                <th className="py-2.5 px-3">Dispute Window</th>
-                <th className="py-2.5 px-3 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#CFE3F1]">
-              {filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="py-8 text-center text-[#5F86A6]">
-                    No transactions matching the selected criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredItems.map((item) => {
-                  const isSelected = item.event_id === selectedEventId;
-                  return (
-                    <tr
-                      key={item.event_id}
-                      onClick={() => onSelectTransaction(item.event_id)}
-                      className={`cursor-pointer transition-subtle hover:bg-[#EDF4FA]/60 ${
-                        isSelected ? "bg-[#EDF4FA] ring-1 ring-inset ring-[#8FB8D6]" : ""
-                      }`}
-                    >
-                      <td className="py-2.5 px-3">{getPriorityBadge(item.priority_score, item.priority_level)}</td>
-                      <td className="py-2.5 px-3 font-semibold text-[#243A5E] font-mono">
-                        {item.invoice_number}
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-700">
-                        <div className="font-medium">{item.vendor_name}</div>
-                        <div className="text-[10px] text-[#5F86A6]">{item.vendor_id}</div>
-                      </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-600">
-                        <div>{item.shipment_id}</div>
-                        {item.awb_number && <div className="text-[10px] text-[#5F86A6]">{item.awb_number}</div>}
-                      </td>
-                      <td className="py-2.5 px-3">{getStatusBadge(item.status)}</td>
-                      <td className="py-2.5 px-3">
-                        {item.primary_discrepancy ? (
-                          <span className="inline-block font-mono text-[11px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                            {item.primary_discrepancy}
+                        {/* Vendor Name */}
+                        <td className="py-3 px-3">
+                          <span className="font-semibold text-slate-800 block truncate max-w-xs">
+                            {item.vendor_name || item.vendor_id}
                           </span>
-                        ) : (
-                          <span className="text-slate-400 text-[11px]">—</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-tabular font-medium text-slate-800">
-                        {formatIDR(item.billed_amount)}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-tabular text-slate-600">
-                        {formatIDR(item.expected_amount)}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-tabular font-semibold">
-                        {item.variance_amount > 0 ? (
-                          <span className="text-rose-600">+{formatIDR(item.variance_amount)}</span>
-                        ) : item.variance_amount < 0 ? (
-                          <span className="text-emerald-600">{formatIDR(item.variance_amount)}</span>
-                        ) : (
-                          <span className="text-slate-400">Rp 0</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-xs">
-                        {item.days_remaining_to_dispute <= 7 ? (
-                          <span className="inline-flex items-center gap-1 font-semibold text-rose-600">
-                            <svg className="w-3.5 h-3.5 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            {item.days_remaining_to_dispute}d left
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {item.vendor_id}
                           </span>
-                        ) : (
-                          <span className="text-slate-600">{item.days_remaining_to_dispute}d left</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectTransaction(item.event_id);
-                          }}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded transition-subtle shadow-xs ${
-                            isSelected
-                              ? "bg-[#243A5E] text-white"
-                              : "bg-white text-[#243A5E] border border-[#CFE3F1] hover:bg-[#EDF4FA]"
-                          }`}
-                        >
-                          {isSelected ? "Inspecting" : "Inspect"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3 px-3">
+                          {renderStatusBadge(item.status)}
+                        </td>
+
+                        {/* Primary Discrepancy */}
+                        <td className="py-3 px-3">
+                          {(item.primary_discrepancy || item.top_discrepancy || (item.variance_amount > 0 && item.status === "EXCEPTION" ? `[RATE_OVERCHARGE] +${formatIDR(item.variance_amount)}` : "")) ? (
+                            <span
+                              className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 block truncate max-w-[170px]"
+                              title={item.primary_discrepancy || item.top_discrepancy || `Overcharge +${formatIDR(item.variance_amount)}`}
+                            >
+                              {item.primary_discrepancy || item.top_discrepancy || `[RATE_OVERCHARGE] +${formatIDR(item.variance_amount)}`}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">
+                              Tidak ada anomali
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Billed Amount */}
+                        <td className="py-3 px-3 font-mono font-medium text-slate-700">
+                          {formatIDR(item.billed_amount)}
+                        </td>
+
+                        {/* Expected Amount */}
+                        <td className="py-3 px-3 font-mono font-medium text-slate-600">
+                          {formatIDR(item.expected_amount)}
+                        </td>
+
+                        {/* Variance */}
+                        <td className="py-3 px-3">
+                          {item.variance_amount === 0 ? (
+                            <span className="text-slate-400 font-mono text-xs">Rp 0</span>
+                          ) : (
+                            <span
+                              className={`font-mono text-xs font-bold ${
+                                isOvercharge ? "text-rose-700" : "text-emerald-700"
+                              }`}
+                            >
+                              {isOvercharge ? "+" : ""}
+                              {formatIDR(item.variance_amount)}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Action */}
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectTransaction(item.event_id);
+                            }}
+                            className="h-7 px-2 text-[11px] font-bold text-slate-600 hover:text-[#1B2A4A] hover:bg-slate-100 gap-1 cursor-pointer"
+                          >
+                            <span>Periksa Bukti</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

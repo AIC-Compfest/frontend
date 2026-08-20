@@ -7,7 +7,12 @@ export type ReconciliationStatus =
   | "EXCEPTION"
   | "MISSING"
   | "DUPLICATE"
-  | "INSUFFICIENT_EVIDENCE";
+  | "INSUFFICIENT_EVIDENCE"
+  | "RESOLVED"
+  | "APPROVED"
+  | "REJECTED"
+  | "DISPUTE"
+  | "DISPUTED";
 
 export type DiscrepancySeverity = "CRITICAL" | "WARNING" | "INFO";
 
@@ -222,10 +227,18 @@ export interface DisputePackage {
   discrepancies: DiscrepancyItem[];
   contract_clause: string;
   calculation_trace: CalculationTrace;
-  days_remaining: number;
-  dispute_deadline: string;
   reviewer_action: string;
   reviewer_role: string;
   reviewer_reason: string;
   formatted_memo: string;
 }
+
+export interface QueueResponse {
+  summary: QueueSummary;
+  items: QueueItem[];
+  total: number;
+  page?: number;
+  page_size?: number;
+  total_pages?: number;
+}
+
