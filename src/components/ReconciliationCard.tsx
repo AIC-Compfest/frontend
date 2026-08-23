@@ -231,8 +231,9 @@ export function ReconciliationCard({
               {(() => {
                 const trace = event.pricing.trace;
                 const baseRate = (trace && trace.base_rate_unit > 0) ? trace.base_rate_unit : (event.contract?.base_rate || 3500);
-                const weight = (trace && trace.weight_used_kg > 0) ? trace.weight_used_kg : (event.invoice?.weight_billed_kg || event.shipment?.weight_actual_kg || 125);
+                const weight = (trace && trace.weight_used_kg > 0) ? trace.weight_used_kg : (event.invoice?.weight_billed_kg || event.shipment?.weight_actual_kg || 1250);
                 const baseAmt = (trace && trace.base_amount > 0) ? trace.base_amount : (event.pricing?.expected_base_charge || Math.round(billed * 0.85));
+
                 const fuelPct = (trace && trace.fuel_percent > 0) ? trace.fuel_percent : (event.contract?.applicable_fuel_surcharge_percent || 5);
                 const fuelAmt = (trace && trace.fuel_amount > 0) ? trace.fuel_amount : (event.pricing?.expected_fuel_surcharge || Math.round(baseAmt * (fuelPct / 100)));
                 const preTax = (trace && trace.pre_tax_amount > 0) ? trace.pre_tax_amount : (baseAmt + fuelAmt);
