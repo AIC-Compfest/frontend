@@ -35,7 +35,49 @@ export interface EvidenceSource {
   document_id: string;
   page: number;
   bbox?: BoundingBox;
+  /** Coordinate space of bbox — 'normalized_01' means values are in [0,1] */
+  coordinate_space?: "normalized_01" | "pdf_points" | "pixels";
+  /** Original page dimensions for coordinate transformation */
+  page_width_pts?: number;
+  page_height_pts?: number;
 }
+
+/**
+ * DocumentSegment — a logical document within a physical uploaded file.
+ * One physical PDF can contain multiple segments (Invoice, SJ, POD, etc.)
+ */
+export interface DocumentSegment {
+  id: string;
+  document_id: string;
+  segment_number: number;
+  document_type: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT" | "UNKNOWN";
+  start_page: number;
+  end_page: number;
+  page_count: number;
+  classification_confidence: number;
+  classification_method: string;
+  extraction_status: "PENDING" | "EXTRACTING" | "EXTRACTED" | "FAILED" | "REQUIRES_HUMAN_REVIEW";
+  domain_entity_type?: string;
+  domain_entity_id?: string;
+  requires_human_review?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Response from GET /documents/:id/segments */
+export interface SegmentedDocument {
+  id: string;
+  filename: string;
+  file_size: number;
+  mime_type: string;
+  sha256_hash: string;
+  status: string;
+  page_count: number;
+  segments: DocumentSegment[];
+  created_at: string;
+  updated_at: string;
+}
+
 
 export interface DiscrepancyItem {
   code: string;
@@ -109,12 +151,19 @@ export interface InvoiceCanonical {
   service_type?: string;
   origin?: string;
   destination?: string;
+  /** PRIMARY entity resolution key — use this first for matching */
+  shipment_id?: string;
+  /** Secondary entity resolution key */
+  awb_number?: string;
   weight_billed_kg: number;
   base_charge_billed?: number;
   fuel_surcharge_billed?: number;
   tax_billed?: number;
   billed_amount: number;
   currency: string;
+  /** Provenance: which document segment produced this record */
+  document_id?: string;
+  segment_id?: string;
   field_evidence?: Record<string, EvidenceSource>;
 }
 
@@ -128,6 +177,8 @@ export interface ShipmentCanonical {
   weight_actual_kg: number;
   total_packages: number;
   item_description?: string;
+  document_id?: string;
+  segment_id?: string;
   field_evidence?: Record<string, EvidenceSource>;
 }
 
@@ -141,6 +192,8 @@ export interface PODCanonical {
   signature_confidence: number;
   stamp_present: boolean;
   condition?: string;
+  document_id?: string;
+  segment_id?: string;
   field_evidence?: Record<string, EvidenceSource>;
 }
 
@@ -154,8 +207,11 @@ export interface ContractCanonical {
   applicable_fuel_surcharge_percent: number;
   minimum_charge?: number;
   dispute_window_days: number;
+  document_id?: string;
+  segment_id?: string;
   field_evidence?: Record<string, EvidenceSource>;
 }
+
 
 export interface ReconciliationDecision {
   status: ReconciliationStatus;
@@ -193,6 +249,7 @@ export interface QueueItem {
   awb_number: string;
   status: ReconciliationStatus;
   primary_discrepancy?: string;
+  top_discrepancy?: string;
   discrepancy_count: number;
   billed_amount: number;
   expected_amount: number;
