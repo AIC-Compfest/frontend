@@ -11,6 +11,7 @@ import {
   X,
   LogIn,
 } from "lucide-react";
+import VeriflowLogo from "../logo/VeriflowLogo";
 
 interface NavbarProps {
   onLaunchApp?: () => void;
@@ -24,7 +25,8 @@ export function Navbar({ onLaunchApp }: NavbarProps) {
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#243A5E] text-white shadow-xs group-hover:bg-[#1C2E4A] transition-all">
+          <VeriflowLogo />
+          {/* <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#243A5E] text-white shadow-xs group-hover:bg-[#1C2E4A] transition-all">
             <ShieldCheck className="h-5 w-5 text-[#8FB8D6]" />
           </div>
           <div className="flex flex-col">
@@ -32,14 +34,11 @@ export function Navbar({ onLaunchApp }: NavbarProps) {
               <span className="font-extrabold text-base tracking-tight text-[#243A5E]">
                 LogiRecon<span className="text-[#5F86A6]">.AI</span>
               </span>
-              <Badge variant="brand" className="text-[10px] px-1.5 py-0">
-                COMPFEST 18
-              </Badge>
             </div>
             <span className="text-[10px] text-slate-500 font-medium -mt-0.5 hidden sm:inline">
               Evidence-First 3PL Reconciliation
             </span>
-          </div>
+          </div> */}
         </Link>
 
         {/* Desktop Navigation Links */}

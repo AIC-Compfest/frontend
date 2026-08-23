@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { ShieldCheck, ExternalLink, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import VeriflowLogo from "../logo/VeriflowLogo";
 
 export function Footer() {
   return (
@@ -10,7 +11,8 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Col 1: Brand Info */}
           <div className="space-y-3 md:col-span-2">
-            <div className="flex items-center gap-2">
+            <VeriflowLogo variant="light" />
+            {/* <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#243A5E] text-white">
                 <ShieldCheck className="h-4 w-4 text-[#8FB8D6]" />
               </div>
@@ -20,13 +22,13 @@ export function Footer() {
               <Badge className="bg-[#5F86A6]/40 text-[#EDF4FA] text-[9px] px-1.5 py-0">
                 COMPFEST 18
               </Badge>
-            </div>
+            </div> */}
             <p className="text-slate-400 text-xs max-w-sm leading-relaxed">
               Evidence-First AI 3PL Invoice Reconciliation Engine built for the Compfest AI Innovation Challenge (Smart Logistics). Cross-auditing invoices, warehouse waybills, and rate contracts with deterministic financial math.
             </p>
-            <div className="text-[11px] text-slate-500 font-mono">
+            {/* <div className="text-[11px] text-slate-500 font-mono">
               Architecture: Microsecond Go Engine • PP-Structure OCR • Supabase Cloud
-            </div>
+            </div> */}
           </div>
 
           {/* Col 2: Navigation Links */}
