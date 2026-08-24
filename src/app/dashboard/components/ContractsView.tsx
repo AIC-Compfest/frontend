@@ -37,7 +37,7 @@ export function ContractsView() {
             Active Rate Agreements (PKS Matrix)
           </h2>
           <p className="text-xs text-slate-500">
-            Master Service Agreements (MSA) and contractual tariff cards fetched from Supabase Database.
+            Review active master service agreements and the tariff rules used during reconciliation.
           </p>
         </div>
         <Button
@@ -60,7 +60,7 @@ export function ContractsView() {
 
       {loading ? (
         <div className="p-12 text-center text-xs text-slate-400">
-          Memuat rate agreements dari Supabase...
+          Memuat rate agreements...
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">

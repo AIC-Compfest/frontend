@@ -126,7 +126,7 @@ function buildBBoxItems(
     ));
     items.push(makeItem(
       "inv_dest", "destination", "Kota Tujuan Tagih",
-      inv.destination ?? "—", inv.destination ?? "",
+      inv.destination ?? "-", inv.destination ?? "",
       0.98, inv.field_evidence?.destination, isWrongZone, false
     ));
     items.push(makeItem(
@@ -238,7 +238,7 @@ function buildBBoxItems(
 
     items.push(makeItem(
       "pod_date", "delivery_date", "Tanggal Serah Terima POD",
-      pod.delivery_date ?? "—", pod.delivery_date ?? "",
+      pod.delivery_date ?? "-", pod.delivery_date ?? "",
       0.92, podEvidence.delivery_date, isDateMismatch, false
     ));
 
@@ -427,7 +427,7 @@ export function EvidenceViewer({
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 tracking-wide">
-                  {activeDocumentTab === "INVOICE" && "PT CEPAT LOGISTIK NUSANTARA — INVOICE"}
+                  {activeDocumentTab === "INVOICE" && "PT CEPAT LOGISTIK NUSANTARA - INVOICE"}
                   {activeDocumentTab === "SURAT_JALAN" && "SURAT JALAN & PENGANTAR BARANG"}
                   {activeDocumentTab === "POD" && "BUKTI PENYERAHAN BARANG (PROOF OF DELIVERY)"}
                   {activeDocumentTab === "RATE_AGREEMENT" && "PERJANJIAN KERJASAMA TARIF LOGISTIK (RATE CARD)"}
@@ -457,7 +457,7 @@ export function EvidenceViewer({
             <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
               <div>
                 <div className="text-[10px] text-slate-500 uppercase">Vendor / Transporter</div>
-                <div className="font-semibold text-slate-800">{event.vendor_name || event.vendor_id}</div>
+                <div className="font-semibold text-slate-800">{event.vendor_id}</div>
               </div>
               <div>
                 <div className="text-[10px] text-slate-500 uppercase">Tanggal Dokumen</div>

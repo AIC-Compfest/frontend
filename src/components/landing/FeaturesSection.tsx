@@ -23,7 +23,7 @@ export function FeaturesSection() {
       badge: "EVIDENCE-FIRST PROVENANCE",
       title: "100% Spatial Bounding Box Provenance",
       description:
-        "Every single extracted fact—from shipment dates to billed charges—is bound to exact normalized bounding box coordinates [x1, y1, x2, y2]. When reviewing a discrepancy, 1-click jumps directly to the highlighted proof in the original PDF or camera scan.",
+        "Every extracted fact, from shipment dates to billed charges, can be linked to source evidence. When reviewing a discrepancy, one click takes the reviewer to the relevant proof.",
       metric: "Zero Hallucination Guarantee",
       color: "from-blue-500/10 to-indigo-500/5",
       borderColor: "border-blue-200",
@@ -34,7 +34,7 @@ export function FeaturesSection() {
       title: "Pure Integer IDR Pricing & 13 Verification Checks",
       description:
         "No LLMs are ever used for money calculation. Our Go Engine executes pure deterministic integer arithmetic with 11% PPN tax, fuel surcharge percentages, and origin-destination rate matrix lookups, delivering sub-millisecond precision.",
-      metric: "82.83 µs Reconciliation Latency",
+      metric: "Source-linked reconciliation",
       color: "from-emerald-500/10 to-teal-500/5",
       borderColor: "border-emerald-200",
     },
@@ -72,7 +72,7 @@ export function FeaturesSection() {
             Built for Financial Auditability, Not Just Optical Character Recognition
           </h2>
           <p className="text-slate-600 text-base leading-relaxed">
-            Standard OCR only extracts text. <strong>LogiRecon AI</strong> cross-audits four disparate logistics documents, enforces contract terms, and protects your bottom line with mathematical certainty.
+            Standard OCR only extracts text. <strong>Veriflow</strong> connects logistics documents, contract terms, and financial decisions so teams can act with confidence.
           </p>
         </div>
 

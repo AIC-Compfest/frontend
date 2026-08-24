@@ -32,20 +32,20 @@ export function HeroSection({ onLaunchApp }: HeroSectionProps) {
             {/* Innovation Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#8FB8D6]/60 shadow-2xs text-xs font-semibold text-[#243A5E]">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Evidence-First AI Engine • Compfest 18 Smart Logistics</span>
+              <span>Evidence-led reconciliation for 3PL teams</span>
             </div>
 
             {/* Main Title */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-              Stop 3PL Logistics Overcharges with{" "}
-              <span className="bg-gradient-to-r from-[#243A5E] via-[#5F86A6] to-[#243A5E] bg-clip-text text-transparent">
-                Evidence-First AI
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl tracking-tight text-[#12203A] leading-[1.08]">
+              Make every 3PL charge{" "}
+              <span className="text-[#0077CC]">
+                accountable
               </span>
             </h1>
 
             {/* Description */}
             <p className="text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-              Automatically reconcile messy <strong>Invoices, Surat Jalan, PODs, and Rate Contracts</strong> in microseconds. Detect unauthorized fuel surcharges, weight tier discrepancies, and duplicate billings with <strong>100% spatial Bounding Box proof</strong>.
+              Reconcile invoices against shipment evidence and contracted rates. Surface overcharges, missing documents, and exceptions with a clear trail for review.
             </p>
 
             {/* Key Value Bullets */}
@@ -56,7 +56,7 @@ export function HeroSection({ onLaunchApp }: HeroSectionProps) {
               </div>
               <div className="flex items-center gap-2 text-xs font-medium text-slate-700 bg-white/80 border border-slate-200/80 px-3 py-2 rounded-lg">
                 <Zap className="h-4 w-4 text-amber-500 shrink-0" />
-                <span>82.83 µs Engine Latency</span>
+                <span>Fast exception review</span>
               </div>
               <div className="flex items-center gap-2 text-xs font-medium text-slate-700 bg-white/80 border border-slate-200/80 px-3 py-2 rounded-lg">
                 <ShieldCheck className="h-4 w-4 text-[#243A5E] shrink-0" />

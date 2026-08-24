@@ -15,7 +15,7 @@ export function LogosCloud() {
     "Oracle SCM Cloud",
     "Microsoft Dynamics 365",
     "Odoo ERP",
-    "Supabase PostgreSQL",
+    "Connected data sources",
   ];
 
   return (

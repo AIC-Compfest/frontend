@@ -16,6 +16,7 @@ import {
   Building2,
   CheckCircle2,
 } from "lucide-react";
+import VeriflowLogo from "@/components/logo/VeriflowLogo";
 
 export type DashboardTab =
   | "OVERVIEW"
@@ -114,19 +115,7 @@ export function Sidebar({
       {/* Brand Header */}
       <div className="p-4 border-b border-[#243A5E]/70">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 border border-sky-400/30 text-sky-400 shadow-xs group-hover:bg-sky-500 group-hover:text-white transition-all">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1">
-              <span className="font-bold text-base tracking-tight text-white">
-                LogiRecon<span className="text-sky-400">.AI</span>
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-medium block">
-              3PL Invoice Reconciliation
-            </span>
-          </div>
+          <VeriflowLogo variant="light" className="h-8 w-auto" />
         </Link>
       </div>
 

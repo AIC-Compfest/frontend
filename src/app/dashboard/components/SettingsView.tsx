@@ -99,10 +99,10 @@ export function SettingsView() {
       <Card className="border border-slate-200 shadow-sm bg-white">
         <CardHeader className="pb-3 border-b border-slate-100">
           <CardTitle className="text-base font-bold text-slate-900">
-            Enterprise Financial Tolerance Gates (PRD §30)
+            Enterprise financial tolerance gates
           </CardTitle>
           <CardDescription className="text-xs">
-            Discrepancies below these thresholds are persisted to Supabase and evaluated deterministically.
+            Discrepancies below these thresholds are recorded and evaluated deterministically.
           </CardDescription>
         </CardHeader>
 
@@ -168,7 +168,7 @@ export function SettingsView() {
               {isSaved ? (
                 <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  <span>Kebijakan rekonsiliasi berhasil disimpan ke Supabase!</span>
+                  <span>Kebijakan rekonsiliasi berhasil disimpan!</span>
                 </div>
               ) : (
                 <span className="text-xs text-slate-400">Policy changes take effect immediately across all active workers.</span>

@@ -221,7 +221,7 @@ export function ReconciliationCard({
           >
             <span className="flex items-center gap-1.5">
               <Calculator className="h-3.5 w-3.5 text-[#5F86A6]" />
-              <span>Deterministic Price Calculation Trace (PRD §29)</span>
+              <span>Deterministic price calculation trace</span>
             </span>
             {showTrace ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
           </button>

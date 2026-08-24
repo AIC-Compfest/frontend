@@ -26,19 +26,6 @@ export function Navbar({ onLaunchApp }: NavbarProps) {
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <VeriflowLogo />
-          {/* <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#243A5E] text-white shadow-xs group-hover:bg-[#1C2E4A] transition-all">
-            <ShieldCheck className="h-5 w-5 text-[#8FB8D6]" />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base tracking-tight text-[#243A5E]">
-                LogiRecon<span className="text-[#5F86A6]">.AI</span>
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-500 font-medium -mt-0.5 hidden sm:inline">
-              Evidence-First 3PL Reconciliation
-            </span>
-          </div> */}
         </Link>
 
         {/* Desktop Navigation Links */}

@@ -154,7 +154,7 @@ function DashboardContent() {
               {currentTab === "SETTINGS" && "Policy & Tolerance Thresholds"}
             </h1>
             <Badge variant="outline" className="text-[10px] font-mono text-slate-500">
-              Supabase Live
+              Workspace connected
             </Badge>
           </div>
 

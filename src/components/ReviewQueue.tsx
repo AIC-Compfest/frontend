@@ -295,7 +295,7 @@ export function ReviewQueue({
           {isLoading ? (
             <div className="p-16 text-center text-xs text-slate-500 space-y-2">
               <div className="animate-spin w-6 h-6 border-2 border-[#1B2A4A] border-t-transparent rounded-full mx-auto" />
-              <span>Memuat antrean rekonsiliasi dari database Supabase...</span>
+              <span>Memuat antrean rekonsiliasi...</span>
             </div>
           ) : items.length === 0 ? (
             <div className="p-16 text-center text-xs text-slate-400 space-y-2">

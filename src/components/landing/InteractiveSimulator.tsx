@@ -130,7 +130,7 @@ export function InteractiveSimulator({ onLaunchApp }: InteractiveSimulatorProps)
             Simulate Real 3PL Discrepancy Audits in Real-Time
           </h2>
           <p className="text-slate-600 text-sm sm:text-base">
-            Select a real-world logistics scenario below to see how our engine cross-reconciles evidence, checks contract terms, and flags overcharges in microseconds.
+            Select a logistics scenario to see how Veriflow connects evidence, checks contract terms, and flags overcharges for review.
           </p>
         </div>
 

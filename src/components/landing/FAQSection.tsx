@@ -10,7 +10,7 @@ export function FAQSection() {
   const faqs = [
     {
       q: "How does the system ensure zero AI hallucination in financial calculations?",
-      a: "Our architecture enforces strict separation of concerns (PRD §29 & §70). AI and Computer Vision models are strictly limited to perception tasks (OCR, layout parsing, and bounding box localization). All monetary calculations, VAT (PPN 11%) computations, and contract tariff matching are executed by a pure deterministic Go engine using integer IDR arithmetic with 100% reproducible trace logs.",
+      a: "Veriflow separates document understanding from financial decisions. Extraction supports review, while contract matching, tolerance checks, and reconciliation outcomes remain traceable and reproducible.",
     },
     {
       q: "Do our 3PL logistics vendors need to install any software or portal?",
@@ -18,11 +18,11 @@ export function FAQSection() {
     },
     {
       q: "How does the system handle blurry or rotated smartphone photos of PODs?",
-      a: "Our preprocessing pipeline (PRD §21) uses OpenCV for automated deskew angle correction, adaptive thresholding for shadow removal, and Laplacian variance blur estimation. The signature detector uses morphological contours and stroke density analysis to confirm receiver signature and stamp presence even on degraded mobile camera scans.",
+      a: "The document workflow is designed for imperfect PDFs, scans, and phone captures. Low-confidence fields remain visible for human review instead of being silently guessed.",
     },
     {
       q: "What is the speed and latency profile of the reconciliation engine?",
-      a: "In verified competition benchmark tests across 20 pilot transactions, our compiled Go reconciliation engine achieved an average execution latency of 82.83 µs (0.083 milliseconds)—which is over 6,036x faster than the PRD §44 limit of 500 milliseconds. It can easily process upwards of 12,000 transactions per second per CPU core.",
+      a: "The current demo is grounded in a synthetic reconciliation test set. Production performance depends on document quality, integrations, and review policy, so we present benchmark results as engineering evidence rather than a universal promise.",
     },
     {
       q: "How is audit immutability and compliance maintained?",

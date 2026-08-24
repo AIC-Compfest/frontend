@@ -46,7 +46,7 @@ export function PricingSection({ onLaunchApp }: PricingSectionProps) {
         "Automated Rate Card & Addendum Matrix Compiler",
         "1-Click ERP JSON & Signed PDF Dispute Claim Export",
         "Append-Only Immutable PostgreSQL Audit Trail",
-        "Supabase Private Cloud Storage & Dedicated API",
+        "Private document storage & dedicated API",
         "Priority 24/7 Support with 1-Hour SLA",
       ],
       buttonText: "Deploy Enterprise Workspace",

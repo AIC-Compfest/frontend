@@ -2,19 +2,21 @@
 
 :root {
   --color-midnight-navy: #243A5E;
-  --color-dusty-denim: #5F86A6;
-  --color-calm-ocean: #8FB8D6;
-  --color-cloud-blue: #EDF4FA;
-  --color-powder-sky: #CFE3F1;
+  --color-action-blue: #0077CC;
+  --color-accent-teal: #00B4B3;
+  --color-surface-soft: #E6EEF5;
+  --color-surface-strong: #D7E3EE;
+  --color-hairline: #CDDBE8;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Boldonse", Impact, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
 }
 
 @layer base {
   body {
-    background-color: #F8FAFC;
-    color: #1E293B;
+    background-color: #F7F9FB;
+    color: #12203A;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
@@ -32,16 +34,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #EDF4FA;
+  background: #E6EEF5;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CFE3F1;
+  background: #CDDBE8;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5F86A6;
+  background: #0077CC;
 }
 
 /* Subtle transitions */
@@ -51,5 +53,9 @@
 
 /* Card border accents */
 .card-border {
-  border: 1px solid #CFE3F1;
+  border: 1px solid #CDDBE8;
+}
+
+.font-display {
+  font-family: var(--font-display);
 }

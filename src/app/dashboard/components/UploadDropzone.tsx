@@ -266,7 +266,7 @@ export function UploadDropzone() {
             </Badge>
           </div>
           <CardDescription className="text-xs text-slate-500 mt-1">
-            Mendukung format PDF, JPG, PNG, dan TIFF. Dokumen disimpan terenkripsi di Supabase Private Cloud dengan verifikasi hash SHA-256 deduplikasi.
+              Mendukung format PDF, JPG, PNG, dan TIFF. Dokumen diproses dengan verifikasi hash SHA-256 untuk mencegah duplikasi.
           </CardDescription>
         </CardHeader>
 
@@ -481,10 +481,10 @@ export function UploadDropzone() {
           <div>
             <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <FileCheck2 className="h-4 w-4 text-emerald-600" />
-              <span>Dokumen Tersimpan di Supabase ({savedDocs.length})</span>
+              <span>Dokumen Tersimpan ({savedDocs.length})</span>
             </CardTitle>
             <CardDescription className="text-xs text-slate-500 mt-0.5">
-              Live metadata berkas dari tabel <code className="font-mono text-sky-700">public.documents</code> &amp; Supabase Storage.
+              Metadata berkas yang siap dipakai dalam rekonsiliasi.
             </CardDescription>
           </div>
 

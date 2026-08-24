@@ -90,7 +90,7 @@ export function DisputePackageModal({
             </div>
             <div>
               <CardTitle className="text-sm font-extrabold text-[#243A5E]">
-                Official 3PL Billing Dispute Claim Package (PRD §39)
+                Official 3PL billing dispute claim package
               </CardTitle>
               <CardDescription className="text-[11px] text-slate-500">
                 Official claim memo with MSA contractual clauses & trace logs

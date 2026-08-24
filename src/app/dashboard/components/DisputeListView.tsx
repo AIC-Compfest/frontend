@@ -58,7 +58,7 @@ export function DisputeListView({ onSelectTransaction }: DisputeListViewProps) {
             </Badge>
           </div>
           <p className="text-xs text-slate-500">
-            Daftar paket sanggahan klaim overcharge yang di-query langsung dari kasus anomali database Supabase.
+            Daftar paket sanggahan klaim overcharge yang dibuat dari kasus anomali yang telah ditinjau.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export function DisputeListView({ onSelectTransaction }: DisputeListViewProps) {
         {isLoading ? (
           <div className="p-16 text-center text-xs text-slate-500 space-y-2">
             <div className="animate-spin w-6 h-6 border-2 border-[#1B2A4A] border-t-transparent rounded-full mx-auto" />
-            <span>Mengambil kasus sanggahan status=EXCEPTION dari Supabase...</span>
+            <span>Mengambil kasus sanggahan status=EXCEPTION...</span>
           </div>
         ) : items.length === 0 ? (
           <div className="p-16 text-center text-xs text-slate-400 space-y-2">

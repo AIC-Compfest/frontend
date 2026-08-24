@@ -91,7 +91,7 @@ export function OverviewView({
             Logistics Spend &amp; Reconciliation Overview
           </h2>
           <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
-            Pusat monitoring tagihan logistik, verifikasi kontrak PKS rate, dan penyelesaian overcharge anomali vendor langsung dari database Supabase.
+            Pusat monitoring tagihan logistik, verifikasi kontrak PKS rate, dan penyelesaian overcharge anomali vendor.
           </p>
         </div>
 
@@ -118,7 +118,7 @@ export function OverviewView({
                   Review Queue &amp; Transaksi
                 </span>
                 <Badge variant="outline" className="bg-white text-slate-700 font-bold text-xs border-slate-200 px-2 py-0.5 font-mono">
-                  Supabase Live
+                  Workspace connected
                 </Badge>
               </div>
 
@@ -207,7 +207,7 @@ export function OverviewView({
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Perjanjian tarif PKS terhubung aktif di database Supabase
+                  Perjanjian tarif PKS terhubung aktif
                 </p>
               </div>
             </CardHeader>
@@ -246,7 +246,7 @@ export function OverviewView({
 
           <div className="p-4 px-6 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
             <span className="text-xs text-slate-500">
-              5 Master PKS aktif &bull; Supabase Storage
+              5 Master PKS aktif &bull; Evidence repository
             </span>
             <Button
               onClick={onNavigateToContracts || onNavigateToQueue}

@@ -1,28 +1,17 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Evidence-First AI 3PL Invoice Reconciliation Engine",
+  title: "Veriflow | Evidence-led 3PL reconciliation",
   description:
-    "Evidence-first, human-in-the-loop 3PL invoice reconciliation platform for Smart Logistics (COMPFEST AI Innovation Challenge).",
+    "Veriflow helps 3PL finance and operations teams reconcile invoices against shipment evidence and contracted rates.",
   keywords: [
     "3PL",
     "Invoice Reconciliation",
-    "Smart Logistics",
-    "Evidence-First",
-    "Human-in-the-Loop",
-    "COMPFEST",
+    "Veriflow",
+    "3PL reconciliation",
+    "invoice audit",
+    "shipment evidence",
   ],
 };
 
@@ -32,9 +21,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark h-full">
+    <html lang="en" className="h-full">
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} font-sans bg-slate-950 text-slate-100 min-h-full flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200`}
+        className="font-sans bg-[#F7F9FB] text-[#12203A] min-h-full flex flex-col antialiased selection:bg-[#00B4B3]/20 selection:text-[#243A5E]"
       >
         {children}
       </body>

@@ -250,7 +250,7 @@ export function FinalApprovalView({
                 <span>Prinsip Dual-Control Governance (SoD) Aktif</span>
               </div>
               <p className="text-xs text-slate-200 leading-relaxed">
-                Transaksi pada daftar ini di-query langsung dari database Supabase (<strong>status = MATCH</strong>). Selaku <strong>Financial Controller</strong>, persetujuan Anda akan menerbitkan instruksi pencairan kas (*Payment Release Order*), mengubah status di Supabase menjadi <strong>APPROVED</strong>, dan memindahkannya ke tab Riwayat.
+                Transaksi pada daftar ini berstatus <strong>MATCH</strong>. Selaku <strong>Financial Controller</strong>, persetujuan Anda akan menerbitkan instruksi pencairan kas dan memindahkannya ke tab Riwayat.
               </p>
             </div>
           </div>
@@ -350,7 +350,7 @@ export function FinalApprovalView({
               {isLoading ? (
                 <div className="p-16 text-center text-xs text-slate-500 space-y-2">
                   <div className="animate-spin w-6 h-6 border-2 border-[#1B2A4A] border-t-transparent rounded-full mx-auto" />
-                  <span>Mengambil data transaksi status=MATCH dari Supabase...</span>
+                  <span>Mengambil data transaksi status=MATCH...</span>
                 </div>
               ) : items.length === 0 ? (
                 <div className="p-16 text-center space-y-3">
@@ -508,7 +508,7 @@ export function FinalApprovalView({
                 <span>Riwayat Otorisasi Pembayaran (Immutable Audit Ledger)</span>
               </div>
               <p className="text-xs text-slate-200 leading-relaxed">
-                Daftar transaksi yang di-query langsung dari Supabase dengan filter <strong>status = APPROVED</strong>. Data telah ditandatangani sah oleh <strong>Financial Controller</strong> dan terkunci permanen pada database.
+                Daftar transaksi dengan filter <strong>status = APPROVED</strong>. Data telah ditandatangani sah oleh <strong>Financial Controller</strong> dan tercatat pada audit trail.
               </p>
             </div>
 
@@ -569,7 +569,7 @@ export function FinalApprovalView({
             <Card className="border border-slate-200/90 shadow-xs bg-white rounded-2xl">
               <CardHeader className="p-4 pb-1 space-y-0.5">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Status Jejak Audit Supabase
+                  Status Jejak Audit
                 </span>
                 <CardTitle className="text-xl font-extrabold text-emerald-700 flex items-center gap-1.5">
                   <UserCheck className="h-5 w-5 text-emerald-600" />
@@ -614,7 +614,7 @@ export function FinalApprovalView({
               {isLoading ? (
                 <div className="p-16 text-center text-xs text-slate-500 space-y-2">
                   <div className="animate-spin w-6 h-6 border-2 border-[#1B2A4A] border-t-transparent rounded-full mx-auto" />
-                  <span>Mengambil data riwayat status=APPROVED dari Supabase...</span>
+                  <span>Mengambil data riwayat status=APPROVED...</span>
                 </div>
               ) : items.length === 0 ? (
                 <div className="p-16 text-center space-y-3">

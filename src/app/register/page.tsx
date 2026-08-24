@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  ShieldCheck,
   Loader2,
   ArrowLeft,
   AlertCircle,
 } from "lucide-react";
 import { registerUser } from "@/lib/auth";
+import VeriflowLogo from "@/components/logo/VeriflowLogo";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -48,17 +48,12 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col justify-between font-sans selection:bg-[#8FB8D6]/40 selection:text-[#243A5E]">
+    <div className="min-h-screen bg-[#F7F9FB] flex flex-col justify-between font-sans selection:bg-[#00B4B3]/20 selection:text-[#243A5E]">
       {/* Top Header / Nav */}
-      <header className="w-full border-b border-slate-200/80 bg-white py-4 px-6">
+      <header className="w-full border-b border-[#CDDBE8] bg-white/90 py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#243A5E] text-white shadow-xs group-hover:bg-[#1C2E4A] transition-all">
-              <ShieldCheck className="h-4.5 w-4.5 text-[#8FB8D6]" />
-            </div>
-            <span className="font-extrabold text-base tracking-tight text-[#243A5E]">
-              LogiRecon<span className="text-[#5F86A6]">.AI</span>
-            </span>
+            <VeriflowLogo />
           </Link>
 
           <Link
@@ -72,9 +67,17 @@ export default function RegisterPage() {
       </header>
 
       {/* Main Centered Card Area */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-8">
-        <div className="w-full max-w-sm space-y-4">
-          <Card className="mx-auto border border-slate-200/90 shadow-md bg-white rounded-2xl overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 my-8">
+        <div className="w-full max-w-5xl grid lg:grid-cols-[1fr_420px] gap-10 items-center">
+          <div className="hidden lg:block px-8">
+            <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#0077CC]">A clearer operating rhythm</span>
+            <h1 className="font-display text-5xl leading-[1.05] text-[#12203A] mt-5">A shared view of every exception.</h1>
+            <p className="text-base leading-relaxed text-[#55637A] max-w-md mt-6">Set up a workspace where finance and operations teams can trace the decision from billed amount to source document.</p>
+            <div className="mt-10 h-2 max-w-md rounded-full bg-[#E6EEF5] overflow-hidden"><div className="h-full w-2/3 rounded-full bg-[#00B4B3]" /></div>
+            <p className="text-xs text-[#7C879C] mt-3">Built for evidence-led 3PL reconciliation.</p>
+          </div>
+          <div className="w-full max-w-sm mx-auto space-y-4">
+          <Card className="mx-auto border border-[#CDDBE8] shadow-[0_16px_48px_rgba(36,58,94,0.08)] bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 pb-2 space-y-1">
               <CardTitle className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 Create an account
@@ -92,7 +95,7 @@ export default function RegisterPage() {
               {/* Registration Form */}
               <div className="flex flex-col gap-3">
                 <p className="text-xs text-slate-500">
-                  Register with your enterprise email to save user profile into Supabase.
+                  Create a secure workspace for your finance and operations team.
                 </p>
 
                 <form onSubmit={handleSubmit} className="grid gap-3.5">
@@ -165,7 +168,7 @@ export default function RegisterPage() {
                     {submitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating an account…
+                        Creating an account...
                       </>
                     ) : (
                       "Create an account"
@@ -183,6 +186,7 @@ export default function RegisterPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
         </div>
       </main>
 
