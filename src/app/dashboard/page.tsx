@@ -14,10 +14,12 @@ import { AuditTrailView } from "@/components/AuditTrailView";
 import { Sidebar, DashboardTab } from "./components/Sidebar";
 import { OverviewView } from "./components/OverviewView";
 import { UploadDropzone } from "./components/UploadDropzone";
-import { ContractsView } from "./components/ContractsView";
+import { MitraLogistikView } from "./components/MitraLogistikView";
 import { DisputeListView } from "./components/DisputeListView";
 import { SettingsView } from "./components/SettingsView";
 import { FinalApprovalView } from "./components/FinalApprovalView";
+import { ExceptionView } from "./components/ExceptionView";
+import { GlobalAuditLedgerView } from "./components/GlobalAuditLedgerView";
 
 import { RotateCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -144,11 +146,12 @@ function DashboardContent() {
           <div className="flex items-center gap-3">
             <h1 className="text-base font-extrabold text-[#243A5E] tracking-tight">
               {currentTab === "OVERVIEW" && "Overview & Risk Analytics"}
-              {currentTab === "QUEUE" && "Priority Review Queue"}
+              {currentTab === "QUEUE" && "Priority Review Queue (Anomali)"}
+              {currentTab === "EXCEPTIONS" && "Arsip Dokumen Anomali & Ditolak"}
               {currentTab === "WORKSPACE" && "Dual-Pane Evidence Workspace"}
               {currentTab === "FINAL_APPROVAL" && "Executive Final Approval (SoD)"}
               {currentTab === "UPLOAD" && "Document Ingest Dropzone"}
-              {currentTab === "CONTRACTS" && "Active Rate Agreements (PKS)"}
+              {currentTab === "CONTRACTS" && "Mitra Logistik (3PL)"}
               {currentTab === "DISPUTES" && "Official 3PL Dispute Packages"}
               {currentTab === "AUDIT" && "Immutable Audit Trail Ledger"}
               {currentTab === "SETTINGS" && "Policy & Tolerance Thresholds"}
@@ -193,6 +196,14 @@ function DashboardContent() {
               selectedEventId={selectedEventId}
               onSelectTransaction={handleSelectTransaction}
               onRefresh={fetchSummary}
+              onNavigateToFinalApproval={() => setCurrentTab("FINAL_APPROVAL")}
+            />
+          )}
+
+          {/* TAB 2.5: EXCEPTIONS - Archive of anomali / rejected / duplicate docs */}
+          {currentTab === "EXCEPTIONS" && (
+            <ExceptionView
+              onSelectTransaction={handleSelectTransaction}
             />
           )}
 
@@ -201,6 +212,7 @@ function DashboardContent() {
             <FinalApprovalView
               onSelectTransaction={handleSelectTransaction}
               onRefresh={fetchSummary}
+              onNavigateToAudit={() => setCurrentTab("AUDIT")}
             />
           )}
 
@@ -264,38 +276,21 @@ function DashboardContent() {
           {/* TAB 5: UPLOAD - Document Ingest */}
           {currentTab === "UPLOAD" && <UploadDropzone />}
 
-          {/* TAB 6: CONTRACTS - Fetches from rate_agreements */}
-          {currentTab === "CONTRACTS" && <ContractsView />}
+          {/* TAB 6: MITRA LOGISTIK - Master vendor & PKS matrix */}
+          {currentTab === "CONTRACTS" && <MitraLogistikView />}
 
-          {/* TAB 7: DISPUTES - Targeted query for status=EXCEPTION */}
+          {/* TAB 7: DISPUTES - Targeted query for status=DISPUTED */}
           {currentTab === "DISPUTES" && (
             <DisputeListView
               onSelectTransaction={handleSelectTransaction}
             />
           )}
 
-          {/* TAB 8: AUDIT - Fetches from audit_events */}
+          {/* TAB 8: AUDIT - Global Immutable Audit Trail Ledger */}
           {currentTab === "AUDIT" && (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-xl font-black text-[#243A5E]">
-                  Append-Only Immutable Audit Ledger
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Cryptographically secured audit trail recording every automated check and human reviewer action.
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-2xs">
-                {currentEvent ? (
-                  <AuditTrailView auditTrail={currentEvent.audit_trail} />
-                ) : (
-                  <div className="text-center py-12 text-xs text-slate-500">
-                    <ShieldCheck className="h-8 w-8 text-[#5F86A6] mx-auto mb-2 opacity-60" />
-                    <span>Select an invoice in the Review Queue to inspect its complete immutable audit timeline.</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            <GlobalAuditLedgerView
+              onSelectTransaction={handleSelectTransaction}
+            />
           )}
 
           {/* TAB 9: SETTINGS */}

@@ -42,13 +42,17 @@ export function ReconciliationCard({
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
-    }).format(val);
+    }).format(val || 0);
   };
 
-  const billed = event.invoice.billed_amount;
-  const expected = event.pricing.expected_total_charge;
-  const variance = event.pricing.difference_amount || billed - expected;
-  const variancePct = expected > 0 ? ((variance / expected) * 100).toFixed(2) : "0.00";
+  const billed = event?.invoice?.billed_amount || 0;
+  const expected = event?.pricing?.expected_total_charge || 0;
+  const variance = (billed - expected) !== 0 
+    ? (billed - expected) 
+    : (event?.pricing?.difference_amount ?? 0);
+  const absVariance = Math.abs(variance);
+  const variancePct = expected > 0 ? ((absVariance / expected) * 100).toFixed(2) : "0.00";
+  const discrepancies = event?.reconciliation?.discrepancies || [];
 
   return (
     <Card className="flex flex-col h-full bg-white border border-slate-200 shadow-2xs overflow-hidden p-0">
@@ -58,51 +62,51 @@ export function ReconciliationCard({
           <div>
             <div className="flex items-center gap-2">
               <CardTitle className="text-base font-extrabold text-[#243A5E] font-mono">
-                {event.invoice.invoice_number}
+                {event?.invoice?.invoice_number || event?.shipment_id || "INV-UNKNOWN"}
               </CardTitle>
-              {event.reconciliation.status === "MATCH" && (
+              {event?.reconciliation?.status === "MATCH" && (
                 <Badge variant="success" className="text-[10px] font-bold py-0">
                   MATCH
                 </Badge>
               )}
-              {event.reconciliation.status === "APPROVED" && (
+              {event?.reconciliation?.status === "APPROVED" && (
                 <Badge variant="success" className="text-[10px] font-bold py-0 bg-emerald-600 text-white">
                   APPROVED
                 </Badge>
               )}
-              {event.reconciliation.status === "EXCEPTION" && (
+              {event?.reconciliation?.status === "EXCEPTION" && (
                 <Badge variant="destructive" className="text-[10px] font-bold py-0">
                   EXCEPTION
                 </Badge>
               )}
-              {event.reconciliation.status === "DUPLICATE" && (
+              {event?.reconciliation?.status === "DUPLICATE" && (
                 <Badge variant="brand" className="text-[10px] font-bold py-0">
                   DUPLICATE
                 </Badge>
               )}
-              {event.reconciliation.status === "INSUFFICIENT_EVIDENCE" && (
+              {event?.reconciliation?.status === "INSUFFICIENT_EVIDENCE" && (
                 <Badge variant="warning" className="text-[10px] font-bold py-0">
                   UNCONFIRMED
                 </Badge>
               )}
             </div>
             <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-2.5">
-              <span>Vendor: <strong className="text-slate-800 font-semibold">{event.vendor_id}</strong></span>
+              <span>Vendor: <strong className="text-slate-800 font-semibold">{event?.vendor_id || "-"}</strong></span>
               <span>•</span>
-              <span>Shipment ID: <strong className="text-slate-800 font-mono">{event.shipment.shipment_id}</strong></span>
+              <span>Shipment ID: <strong className="text-slate-800 font-mono">{event?.shipment?.shipment_id || event?.shipment_id || "-"}</strong></span>
               <span>•</span>
-              <span>Rute: <strong className="text-slate-800 font-medium">{event.shipment.origin} → {event.shipment.destination}</strong></span>
+              <span>Rute: <strong className="text-slate-800 font-medium">{event?.shipment?.origin || "-"} → {event?.shipment?.destination || "-"}</strong></span>
             </div>
           </div>
 
           <div className="text-right">
             <div className="text-xs font-semibold text-[#243A5E]">
-              Priority Score: <span className="font-mono text-rose-600 font-bold">{event.reconciliation.priority_score.toFixed(0)}</span>/100
+              Priority Score: <span className="font-mono text-rose-600 font-bold">{(event?.reconciliation?.priority_score ?? 0).toFixed(0)}</span>/100
             </div>
             <div className="text-[11px] text-slate-500 mt-0.5">
               Dispute Deadline:{" "}
-              <strong className={event.reconciliation.days_remaining_to_dispute <= 7 ? "text-rose-600 font-bold" : "text-slate-700 font-medium"}>
-                {event.reconciliation.days_remaining_to_dispute} Days Remaining
+              <strong className={(event?.reconciliation?.days_remaining_to_dispute ?? 14) <= 7 ? "text-rose-600 font-bold" : "text-slate-700 font-medium"}>
+                {event?.reconciliation?.days_remaining_to_dispute ?? 14} Days Remaining
               </strong>
             </div>
           </div>
@@ -125,24 +129,32 @@ export function ReconciliationCard({
             <div className="text-[10px] text-slate-500 mt-0.5">Contractually Derived</div>
           </div>
 
-          <div className={variance > 0 ? "text-rose-700" : "text-emerald-700"}>
+          <div className={absVariance > 0 ? (variance > 0 ? "text-rose-700" : "text-amber-700") : "text-emerald-700"}>
             <div className="text-[10px] font-bold uppercase tracking-wider">Variance</div>
             <div className="text-sm sm:text-base font-extrabold font-tabular mt-0.5">
-              {variance > 0 ? `+${formatIDR(variance)}` : "Rp 0"}
+              {variance > 0
+                ? `+${formatIDR(variance)}`
+                : variance < 0
+                ? `-${formatIDR(absVariance)}`
+                : "Rp 0"}
             </div>
-            <div className="text-[10px] mt-0.5">
-              {variance > 0 ? `+${variancePct}% (Overcharge)` : "0% (Clean Match)"}
+            <div className="text-[10px] mt-0.5 font-medium">
+              {variance > 0
+                ? `+${variancePct}% (Overcharge)`
+                : variance < 0
+                ? `-${variancePct}% (Discrepancy)`
+                : "0% (Clean Match)"}
             </div>
           </div>
         </div>
 
         {/* Discrepancies List */}
-        {event.reconciliation.discrepancies.length > 0 ? (
+        {discrepancies.length > 0 ? (
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#243A5E] flex items-center gap-1.5 uppercase tracking-wider">
                 <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-                <span>Identified Discrepancies ({event.reconciliation.discrepancies.length})</span>
+                <span>Identified Discrepancies ({discrepancies.length})</span>
               </span>
               <Button
                 variant="outline"
@@ -156,7 +168,7 @@ export function ReconciliationCard({
             </div>
 
             <div className="space-y-2">
-              {event.reconciliation.discrepancies.map((disc, idx) => (
+              {discrepancies.map((disc, idx) => (
                 <div
                   key={idx}
                   className="p-3 bg-white rounded-xl border border-rose-200 shadow-2xs space-y-2"
@@ -229,17 +241,17 @@ export function ReconciliationCard({
           {showTrace && (
             <div className="p-3.5 bg-slate-950 text-slate-300 font-mono text-[11px] space-y-1.5 leading-relaxed overflow-x-auto">
               {(() => {
-                const trace = event.pricing.trace;
-                const baseRate = (trace && trace.base_rate_unit > 0) ? trace.base_rate_unit : (event.contract?.base_rate || 3500);
-                const weight = (trace && trace.weight_used_kg > 0) ? trace.weight_used_kg : (event.invoice?.weight_billed_kg || event.shipment?.weight_actual_kg || 1250);
-                const baseAmt = (trace && trace.base_amount > 0) ? trace.base_amount : (event.pricing?.expected_base_charge || Math.round(billed * 0.85));
+                const trace = event?.pricing?.trace;
+                const baseRate = (trace && trace.base_rate_unit > 0) ? trace.base_rate_unit : (event?.contract?.base_rate || 3500);
+                const weight = (trace && trace.weight_used_kg > 0) ? trace.weight_used_kg : (event?.invoice?.weight_billed_kg || event?.shipment?.weight_actual_kg || 1250);
+                const baseAmt = (trace && trace.base_amount > 0) ? trace.base_amount : (event?.pricing?.expected_base_charge || Math.round(billed * 0.85));
 
-                const fuelPct = (trace && trace.fuel_percent > 0) ? trace.fuel_percent : (event.contract?.applicable_fuel_surcharge_percent || 5);
-                const fuelAmt = (trace && trace.fuel_amount > 0) ? trace.fuel_amount : (event.pricing?.expected_fuel_surcharge || Math.round(baseAmt * (fuelPct / 100)));
+                const fuelPct = (trace && trace.fuel_percent > 0) ? trace.fuel_percent : (event?.contract?.applicable_fuel_surcharge_percent || 5);
+                const fuelAmt = (trace && trace.fuel_amount > 0) ? trace.fuel_amount : (event?.pricing?.expected_fuel_surcharge || Math.round(baseAmt * (fuelPct / 100)));
                 const preTax = (trace && trace.pre_tax_amount > 0) ? trace.pre_tax_amount : (baseAmt + fuelAmt);
                 const taxPct = (trace && trace.tax_rate_percent > 0) ? trace.tax_rate_percent : 11;
-                const taxAmt = (trace && trace.tax_amount > 0) ? trace.tax_amount : (event.pricing?.expected_tax || Math.round(preTax * (taxPct / 100)));
-                const expTotal = (trace && trace.expected_total > 0) ? trace.expected_total : (event.pricing?.expected_total_charge || expected);
+                const taxAmt = (trace && trace.tax_amount > 0) ? trace.tax_amount : (event?.pricing?.expected_tax || Math.round(preTax * (taxPct / 100)));
+                const expTotal = (trace && trace.expected_total > 0) ? trace.expected_total : (event?.pricing?.expected_total_charge || expected);
                 const billTotal = (trace && trace.billed_total > 0) ? trace.billed_total : billed;
                 const tier = trace?.weight_tier || "Standard Tier";
 

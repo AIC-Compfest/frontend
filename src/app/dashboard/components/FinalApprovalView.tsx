@@ -24,6 +24,7 @@ import {
 interface FinalApprovalViewProps {
   onSelectTransaction: (eventId: string) => void;
   onRefresh?: () => void;
+  onNavigateToAudit?: () => void;
 }
 
 const API_BASE = "http://localhost:8080/api/v1";
@@ -31,6 +32,7 @@ const API_BASE = "http://localhost:8080/api/v1";
 export function FinalApprovalView({
   onSelectTransaction,
   onRefresh,
+  onNavigateToAudit,
 }: FinalApprovalViewProps) {
   const [sodTab, setSodTab] = useState<"PENDING" | "HISTORY">("PENDING");
   const [search, setSearch] = useState("");
@@ -55,9 +57,10 @@ export function FinalApprovalView({
   const fetchSodData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // If PENDING: fetch transactions with status=MATCH (ready for SoD signoff)
-      // If HISTORY: fetch transactions with status=APPROVED (already released)
-      const targetStatus = sodTab === "PENDING" ? "MATCH" : "APPROVED";
+      // PENDING: fetch MATCH (auto-pass clean) + APPROVED (AP_MANAGER approved anomali)
+      // Both statuses are ready for Finance Controller final sign-off
+      // HISTORY: fetch only APPROVED items that went through FC final release
+      const targetStatus = sodTab === "PENDING" ? "MATCH,APPROVED" : "APPROVED";
       const params = new URLSearchParams();
       params.set("status", targetStatus);
       if (filterVendor !== "ALL") params.set("vendor", filterVendor);
@@ -118,9 +121,9 @@ export function FinalApprovalView({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "APPROVE",
-            actor_id: "FINANCE_CONTROLLER_001",
-            actor_role: "FINANCE_CONTROLLER",
-            notes: notes || "Final SoD Payment Release Authorized by Finance Controller",
+            reviewer_id: "FINANCE_CONTROLLER_001",
+            role: "FINANCE_CONTROLLER",
+            reason: notes || "Final SoD Payment Release Authorized by Finance Controller",
           }),
         }).catch(() => {});
       }
@@ -130,6 +133,10 @@ export function FinalApprovalView({
       setNotes("");
       fetchSodData();
       if (onRefresh) onRefresh();
+      // Navigate to Audit Ledger after successful final approval
+      setTimeout(() => {
+        if (onNavigateToAudit) onNavigateToAudit();
+      }, 1500);
     } catch (err) {
       console.error("Authorization error:", err);
     } finally {

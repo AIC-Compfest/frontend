@@ -10,9 +10,9 @@ import {
   FileSpreadsheet,
   FileCheck2,
   ShieldCheck,
+  ShieldAlert,
   Sliders,
   LogOut,
-  ChevronRight,
   Building2,
   CheckCircle2,
 } from "lucide-react";
@@ -21,6 +21,7 @@ import VeriflowLogo from "@/components/logo/VeriflowLogo";
 export type DashboardTab =
   | "OVERVIEW"
   | "QUEUE"
+  | "EXCEPTIONS"
   | "FINAL_APPROVAL"
   | "WORKSPACE"
   | "UPLOAD"
@@ -57,8 +58,13 @@ export function Sidebar({
         },
         {
           id: "QUEUE" as DashboardTab,
-          label: "Review Queue (All)",
+          label: "Review Queue (Anomali)",
           icon: Inbox,
+        },
+        {
+          id: "EXCEPTIONS" as DashboardTab,
+          label: "Arsip Anomali & Ditolak",
+          icon: ShieldAlert,
         },
         {
           id: "FINAL_APPROVAL" as DashboardTab,
@@ -83,8 +89,8 @@ export function Sidebar({
         },
         {
           id: "CONTRACTS" as DashboardTab,
-          label: "Rate Agreements (PKS)",
-          icon: FileSpreadsheet,
+          label: "Mitra Logistik",
+          icon: Building2,
         },
       ],
     },

@@ -24,11 +24,11 @@ export function DisputeListView({ onSelectTransaction }: DisputeListViewProps) {
     }).format(val);
   };
 
-  // Fetch specifically exception/dispute records from Supabase
+  // Fetch specifically DISPUTED records — these are anomali that AP_MANAGER formally disputed
   const fetchDisputes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/reconcile/queue?status=EXCEPTION&page_size=50`);
+      const res = await fetch(`${API_BASE}/reconcile/queue?status=DISPUTED&page_size=50`);
       if (!res.ok) throw new Error("Gagal mengambil data paket sengketa");
       const data = await res.json();
       setItems(data.items || []);

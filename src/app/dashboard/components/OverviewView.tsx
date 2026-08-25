@@ -39,6 +39,9 @@ export function OverviewView({
     }
   );
 
+  const [vendors, setVendors] = useState<Array<{ vendor_id: string; vendor_name: string; is_active: boolean }>>([]);
+  const [vendorsLoading, setVendorsLoading] = useState(true);
+
   const formatIDR = (val?: number | null) => {
     const num = val ?? 0;
     return new Intl.NumberFormat("id-ID", {
@@ -61,11 +64,27 @@ export function OverviewView({
     }
   }, []);
 
+  const fetchVendors = useCallback(async () => {
+    setVendorsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/vendors`);
+      if (!res.ok) throw new Error("Gagal fetch vendors");
+      const data = await res.json();
+      setVendors(data.vendors || []);
+    } catch (err) {
+      console.error("Vendor fetch error:", err);
+      setVendors([]);
+    } finally {
+      setVendorsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!initialSummary || initialSummary.total_invoices_count === 0) {
       fetchSummary();
     }
-  }, [initialSummary, fetchSummary]);
+    fetchVendors();
+  }, [initialSummary, fetchSummary, fetchVendors]);
 
   const totalInvoiced = summary?.total_invoiced_amount ?? (summary as any)?.total_billed_idr ?? 0;
   const totalVariance = summary?.total_variance_amount ?? (summary as any)?.total_variance_idr ?? 0;
@@ -200,7 +219,7 @@ export function OverviewView({
               <div className="space-y-1">
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-extrabold text-slate-900 font-tabular">
-                    5
+                    {vendorsLoading ? "..." : vendors.length}
                   </span>
                   <span className="text-sm font-semibold text-slate-500">
                     Vendor Logistik Terdaftar
@@ -218,20 +237,22 @@ export function OverviewView({
                   Daftar Mitra 3PL Aktif:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {[
-                    "PT Cepat Logistik Nusantara",
-                    "PT Trans Express Indonesia",
-                    "PT Kargo Andalan Utama",
-                    "PT Sinar Logistik Mandiri",
-                    "PT Aruna Freight Solusi",
-                  ].map((v) => (
-                    <span
-                      key={v}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200/60"
-                    >
-                      {v}
-                    </span>
-                  ))}
+                  {vendorsLoading ? (
+                    <span className="text-xs text-slate-400 animate-pulse">Memuat vendor...</span>
+                  ) : vendors.length > 0 ? (
+                    vendors.map((v) => (
+                      <span
+                        key={v.vendor_id}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200/60"
+                      >
+                        {v.vendor_name}
+                      </span>
+                    ))
+                  ) : (
+                    <div className="text-xs text-slate-400 italic py-1">
+                      Belum ada mitra 3PL terdaftar di database. Vendor akan terdaftar secara otomatis saat dokumen invoice/PKS baru diunggah.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -246,7 +267,7 @@ export function OverviewView({
 
           <div className="p-4 px-6 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
             <span className="text-xs text-slate-500">
-              5 Master PKS aktif &bull; Evidence repository
+              {vendorsLoading ? "Memuat..." : `${vendors.length} Master PKS aktif • Evidence repository`}
             </span>
             <Button
               onClick={onNavigateToContracts || onNavigateToQueue}

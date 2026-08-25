@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import {
   Search,
   RotateCw,
-  Filter,
   Inbox,
   AlertTriangle,
   CheckCircle2,
@@ -17,6 +16,9 @@ import {
   Clock,
   TrendingDown,
   DollarSign,
+  ThumbsUp,
+  FileCheck2,
+  XCircle,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,14 +27,19 @@ interface ReviewQueueProps {
   selectedEventId: string | null;
   onSelectTransaction: (eventId: string) => void;
   onRefresh?: () => void;
+  onNavigateToFinalApproval?: () => void;
 }
 
 const API_BASE = "http://localhost:8080/api/v1";
+
+// Anomali statuses that belong in Review Queue
+const ANOMALI_STATUSES = "EXCEPTION,DUPLICATE,INSUFFICIENT_EVIDENCE";
 
 export function ReviewQueue({
   selectedEventId,
   onSelectTransaction,
   onRefresh,
+  onNavigateToFinalApproval,
 }: ReviewQueueProps) {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [summary, setSummary] = useState<QueueSummary>({
@@ -45,9 +52,11 @@ export function ReviewQueue({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  // Default: show anomali only (EXCEPTION, DUPLICATE, INSUFFICIENT_EVIDENCE)
+  const [statusFilter, setStatusFilter] = useState<string>("ANOMALI");
   const [vendorFilter, setVendorFilter] = useState<string>("ALL");
   const [severityFilter, setSeverityFilter] = useState<string>("ALL");
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   const formatIDR = (val?: number | null) => {
     const num = val ?? 0;
@@ -66,12 +75,24 @@ export function ReviewQueue({
     return `Rp ${val.toLocaleString("id-ID")}`;
   };
 
-  // Fetch Queue from Database targeted with exact params
+  const showToast = (msg: string, type: "success" | "error") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // Build actual status param for API
+  const getStatusParam = () => {
+    if (statusFilter === "ANOMALI") return ANOMALI_STATUSES;
+    if (statusFilter === "ALL") return "";
+    return statusFilter;
+  };
+
   const fetchQueueData = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      const statusParam = getStatusParam();
+      if (statusParam) params.set("status", statusParam);
       if (severityFilter !== "ALL") params.set("severity", severityFilter);
       if (vendorFilter !== "ALL") params.set("vendor", vendorFilter);
       if (search.trim() !== "") params.set("search", search.trim());
@@ -104,61 +125,65 @@ export function ReviewQueue({
   const renderStatusBadge = (status: ReconciliationStatus) => {
     switch (status) {
       case "MATCH":
-        return (
-          <Badge variant="success" className="text-[10px] font-bold py-0">
-            MATCH
-          </Badge>
-        );
+        return <Badge variant="success" className="text-[10px] font-bold py-0">MATCH</Badge>;
       case "EXCEPTION":
-        return (
-          <Badge variant="destructive" className="text-[10px] font-bold py-0">
-            EXCEPTION
-          </Badge>
-        );
+        return <Badge variant="destructive" className="text-[10px] font-bold py-0">EXCEPTION</Badge>;
       case "DUPLICATE":
-        return (
-          <Badge variant="brand" className="text-[10px] font-bold py-0">
-            DUPLICATE
-          </Badge>
-        );
+        return <Badge variant="brand" className="text-[10px] font-bold py-0">DUPLICATE</Badge>;
       case "APPROVED":
-        return (
-          <Badge variant="success" className="text-[10px] font-bold py-0 bg-emerald-600 text-white">
-            APPROVED
-          </Badge>
-        );
+        return <Badge variant="success" className="text-[10px] font-bold py-0 bg-emerald-600 text-white">APPROVED</Badge>;
+      case "DISPUTED":
+        return <Badge variant="destructive" className="text-[10px] font-bold py-0 bg-orange-600 text-white">DISPUTED</Badge>;
+      case "REJECTED":
+        return <Badge variant="outline" className="text-[10px] font-bold py-0 text-slate-500">REJECTED</Badge>;
       case "INSUFFICIENT_EVIDENCE":
-        return (
-          <Badge variant="warning" className="text-[10px] font-bold py-0">
-            UNCONFIRMED
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-[10px] font-bold py-0">
-            {status}
-          </Badge>
-        );
+        return <Badge variant="warning" className="text-[10px] font-bold py-0">UNCONFIRMED</Badge>;
     }
   };
 
-  const totalInvoiced = summary?.total_invoiced_amount ?? (summary as any)?.total_billed_idr ?? 0;
-  const totalVariance = summary?.total_variance_amount ?? (summary as any)?.total_variance_idr ?? 0;
-  const totalInvoicesCount = summary?.total_invoices_count ?? items.length;
-  const openExceptionsCount = summary?.open_exceptions_count ?? 0;
-  const urgentDisputesCount = summary?.urgent_disputes_count ?? 0;
-  const matchesCount = summary?.matches_count ?? 0;
+  const totalInvoiced = useMemo(
+    () => items.reduce((sum, item) => sum + (item.billed_amount || 0), 0),
+    [items]
+  );
+  const totalVariance = useMemo(
+    () => items.reduce((sum, item) => sum + (item.variance_amount || 0), 0),
+    [items]
+  );
+  const totalInvoicesCount = items.length;
+  const openExceptionsCount = useMemo(
+    () => items.filter((i) => ["EXCEPTION", "DUPLICATE", "INSUFFICIENT_EVIDENCE"].includes(i.status)).length,
+    [items]
+  );
+  const urgentDisputesCount = useMemo(
+    () => items.filter((i) => (i.days_remaining_to_dispute ?? 0) <= 7 && ["EXCEPTION", "DUPLICATE", "INSUFFICIENT_EVIDENCE"].includes(i.status)).length,
+    [items]
+  );
+  const matchesCount = useMemo(
+    () => items.filter((i) => i.status === "MATCH" || i.status === "APPROVED").length,
+    [items]
+  );
 
   return (
     <div className="space-y-6 max-w-7xl font-sans">
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={cn(
+            "fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold max-w-sm",
+            toast.type === "success"
+              ? "bg-emerald-600 text-white"
+              : "bg-rose-600 text-white"
+          )}
+        >
+          {toast.msg}
+        </div>
+      )}
+
       {/* 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: Invoiced Spend */}
         <Card className="border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all bg-white rounded-2xl">
           <CardHeader className="p-4 pb-1 space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Total Invoiced Spend
-            </span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Invoiced Spend</span>
             <CardTitle className="text-xl font-extrabold text-slate-900 tracking-tight font-tabular">
               {formatCompactIDR(totalInvoiced)}
             </CardTitle>
@@ -169,7 +194,6 @@ export function ReviewQueue({
           </CardContent>
         </Card>
 
-        {/* KPI 2: Total Variance */}
         <Card className="border border-rose-200/80 bg-rose-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
           <CardHeader className="p-4 pb-1 space-y-0.5">
             <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
@@ -185,7 +209,6 @@ export function ReviewQueue({
           </CardContent>
         </Card>
 
-        {/* KPI 3: Open Exceptions */}
         <Card className="border border-amber-200/80 bg-amber-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
           <CardHeader className="p-4 pb-1 space-y-0.5">
             <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
@@ -198,11 +221,10 @@ export function ReviewQueue({
           </CardHeader>
           <CardContent className="p-4 pt-1 text-[11px] text-amber-700 flex items-center gap-1">
             <Clock className="h-3 w-3 text-amber-600" />
-            <span>{urgentDisputesCount} kasus sisa waktu &le; 7 hari</span>
+            <span>{urgentDisputesCount} kasus sisa waktu ≤ 7 hari</span>
           </CardContent>
         </Card>
 
-        {/* KPI 4: Clean Matches */}
         <Card className="border border-emerald-200/80 bg-emerald-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
           <CardHeader className="p-4 pb-1 space-y-0.5">
             <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
@@ -221,7 +243,6 @@ export function ReviewQueue({
 
       {/* Filter & Table Area */}
       <Card className="border border-slate-200/90 shadow-2xs bg-white rounded-2xl overflow-hidden">
-        {/* Toolbar & Filter Bar */}
         <CardHeader className="p-4 pb-3 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           {/* Search */}
           <div className="relative flex-1 min-w-[260px]">
@@ -243,12 +264,15 @@ export function ReviewQueue({
               onChange={(e) => setStatusFilter(e.target.value)}
               className="h-8.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 cursor-pointer"
             >
+              <option value="ANOMALI">⚠️ Anomali (Default)</option>
               <option value="ALL">Semua Status</option>
-              <option value="EXCEPTION">Exception (Anomali)</option>
-              <option value="MATCH">Match (Cocok)</option>
-              <option value="APPROVED">Approved (Sah)</option>
+              <option value="EXCEPTION">Exception</option>
               <option value="DUPLICATE">Duplicate</option>
               <option value="INSUFFICIENT_EVIDENCE">Unconfirmed</option>
+              <option value="MATCH">Match (Lolos)</option>
+              <option value="APPROVED">Approved</option>
+              <option value="DISPUTED">Disputed</option>
+              <option value="REJECTED">Rejected</option>
             </select>
 
             {/* Severity Filter */}
@@ -271,9 +295,7 @@ export function ReviewQueue({
             >
               <option value="ALL">Semua Vendor</option>
               {vendors.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
+                <option key={v} value={v}>{v}</option>
               ))}
             </select>
 
@@ -290,6 +312,14 @@ export function ReviewQueue({
           </div>
         </CardHeader>
 
+        {/* Info Banner */}
+        {statusFilter === "ANOMALI" && (
+          <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-[11px] text-amber-800 flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span>Menampilkan transaksi anomali saja (EXCEPTION, DUPLICATE, INSUFFICIENT_EVIDENCE). Transaksi MATCH langsung masuk <strong>Final Approval</strong>.</span>
+          </div>
+        )}
+
         {/* Table Body */}
         <CardContent className="p-0">
           {isLoading ? (
@@ -300,7 +330,7 @@ export function ReviewQueue({
           ) : items.length === 0 ? (
             <div className="p-16 text-center text-xs text-slate-400 space-y-2">
               <Inbox className="h-8 w-8 text-slate-300 mx-auto" />
-              <p>Tidak ada transaksi yang cocok dengan filter pencarian.</p>
+              <p>Tidak ada transaksi anomali saat ini. Semua transaksi sudah bersih atau telah diproses.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -315,13 +345,18 @@ export function ReviewQueue({
                     <th className="py-3 px-3">Nilai Tagih</th>
                     <th className="py-3 px-3">Ekspektasi</th>
                     <th className="py-3 px-3">Selisih</th>
-                    <th className="py-3 px-4 text-right">Aksi</th>
+                    <th className="py-3 px-4 text-right">Bukti / Evidence</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {items.map((item) => {
                     const isSelected = selectedEventId === item.event_id;
-                    const isOvercharge = item.variance_amount > 0;
+                    const computedVariance = (item.billed_amount && item.expected_amount)
+                      ? (item.billed_amount - item.expected_amount)
+                      : (item.variance_amount || 0);
+                    const isOvercharge = computedVariance > 0;
+                    const isUndercharge = computedVariance < 0;
+                    const isAnomalous = ["EXCEPTION", "DUPLICATE", "INSUFFICIENT_EVIDENCE"].includes(item.status);
 
                     return (
                       <tr
@@ -344,7 +379,7 @@ export function ReviewQueue({
                               }`}
                             />
                             <span className="font-mono text-xs font-bold text-slate-700">
-                              {item.priority_score.toFixed(0)}
+                              {(item.priority_score || 0).toFixed(0)}
                             </span>
                           </div>
                         </td>
@@ -352,85 +387,73 @@ export function ReviewQueue({
                         {/* Invoice & Shipment */}
                         <td className="py-3 px-3">
                           <div className="min-w-0">
-                            <span className="font-extrabold text-slate-900 font-mono block">
-                              {item.invoice_number}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-mono block truncate max-w-[140px]">
-                              {item.shipment_id}
-                            </span>
+                            <span className="font-extrabold text-slate-900 font-mono block">{item.invoice_number}</span>
+                            <span className="text-[10px] text-slate-400 font-mono block truncate max-w-[140px]">{item.shipment_id}</span>
                           </div>
                         </td>
 
                         {/* Vendor Name */}
                         <td className="py-3 px-3">
-                          <span className="font-semibold text-slate-800 block truncate max-w-xs">
-                            {item.vendor_name || item.vendor_id}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {item.vendor_id}
-                          </span>
+                          <span className="font-semibold text-slate-800 block truncate max-w-xs">{item.vendor_name || item.vendor_id}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{item.vendor_id}</span>
                         </td>
 
                         {/* Status */}
-                        <td className="py-3 px-3">
-                          {renderStatusBadge(item.status)}
-                        </td>
+                        <td className="py-3 px-3">{renderStatusBadge(item.status)}</td>
 
                         {/* Primary Discrepancy */}
                         <td className="py-3 px-3">
-                          {(item.primary_discrepancy || item.top_discrepancy || (item.variance_amount > 0 && item.status === "EXCEPTION" ? `[RATE_OVERCHARGE] +${formatIDR(item.variance_amount)}` : "")) ? (
+                          {(item.primary_discrepancy || item.top_discrepancy || (computedVariance !== 0 && isAnomalous)) ? (
                             <span
-                              className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 block truncate max-w-[170px]"
-                              title={item.primary_discrepancy || item.top_discrepancy || `Overcharge +${formatIDR(item.variance_amount)}`}
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded border block truncate max-w-[170px] ${
+                                isOvercharge
+                                  ? "text-rose-700 bg-rose-50 border-rose-200"
+                                  : "text-amber-700 bg-amber-50 border-amber-200"
+                              }`}
+                              title={item.primary_discrepancy || item.top_discrepancy || (isOvercharge ? `Overcharge +${formatIDR(computedVariance)}` : `Discrepancy -${formatIDR(Math.abs(computedVariance))}`)}
                             >
-                              {item.primary_discrepancy || item.top_discrepancy || `[RATE_OVERCHARGE] +${formatIDR(item.variance_amount)}`}
+                              {item.primary_discrepancy || item.top_discrepancy || (isOvercharge ? `[RATE_OVERCHARGE] +${formatIDR(computedVariance)}` : `[PRICE_DISCREPANCY] -${formatIDR(Math.abs(computedVariance))}`)}
                             </span>
                           ) : (
-                            <span className="text-[11px] text-slate-400 italic">
-                              Tidak ada anomali
-                            </span>
+                            <span className="text-[11px] text-slate-400 italic">Tidak ada anomali</span>
                           )}
                         </td>
 
                         {/* Billed Amount */}
-                        <td className="py-3 px-3 font-mono font-medium text-slate-700">
-                          {formatIDR(item.billed_amount)}
-                        </td>
+                        <td className="py-3 px-3 font-mono font-medium text-slate-700">{formatIDR(item.billed_amount)}</td>
 
                         {/* Expected Amount */}
-                        <td className="py-3 px-3 font-mono font-medium text-slate-600">
-                          {formatIDR(item.expected_amount)}
-                        </td>
+                        <td className="py-3 px-3 font-mono font-medium text-slate-600">{formatIDR(item.expected_amount)}</td>
 
                         {/* Variance */}
                         <td className="py-3 px-3">
-                          {item.variance_amount === 0 ? (
+                          {computedVariance === 0 ? (
                             <span className="text-slate-400 font-mono text-xs">Rp 0</span>
+                          ) : isOvercharge ? (
+                            <span className="font-mono text-xs font-bold text-rose-700">
+                              +{formatIDR(computedVariance)}
+                            </span>
                           ) : (
-                            <span
-                              className={`font-mono text-xs font-bold ${
-                                isOvercharge ? "text-rose-700" : "text-emerald-700"
-                              }`}
-                            >
-                              {isOvercharge ? "+" : ""}
-                              {formatIDR(item.variance_amount)}
+                            <span className="font-mono text-xs font-bold text-amber-700">
+                              -{formatIDR(Math.abs(computedVariance))}
                             </span>
                           )}
                         </td>
 
-                        {/* Action */}
+                        {/* Action: Direct Evidence Inspection */}
                         <td className="py-3 px-4 text-right">
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="outline"
                             onClick={(e) => {
                               e.stopPropagation();
                               onSelectTransaction(item.event_id);
                             }}
-                            className="h-7 px-2 text-[11px] font-bold text-slate-600 hover:text-[#1B2A4A] hover:bg-slate-100 gap-1 cursor-pointer"
+                            className="h-7 px-3 text-[11px] font-bold text-[#243A5E] hover:text-white hover:bg-[#243A5E] border-slate-300 gap-1.5 shadow-2xs cursor-pointer ml-auto transition-all"
+                            title="Inspect Bukti Spasial Dokumen di Evidence Workspace"
                           >
-                            <span>Periksa Bukti</span>
-                            <ArrowRight className="h-3 w-3" />
+                            <span>Lihat Bukti</span>
+                            <ArrowRight className="h-3.5 w-3.5" />
                           </Button>
                         </td>
                       </tr>
