@@ -128,7 +128,7 @@ function DashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex font-sans">
+    <div className="min-h-screen bg-[#F7F9FB] text-[#12203A] flex font-sans">
       {/* 1. Left Sidebar Navigation */}
       <Sidebar
         currentTab={currentTab}
@@ -142,7 +142,7 @@ function DashboardContent() {
       {/* 2. Main Content Right Panel */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-3.5 flex items-center justify-between shadow-2xs">
+        <header className="sticky top-0 z-30 bg-[#F7F9FB]/90 backdrop-blur-xl border-b border-[#CDDBE8] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-base font-extrabold text-[#243A5E] tracking-tight">
               {currentTab === "OVERVIEW" && "Overview & Risk Analytics"}
@@ -156,7 +156,7 @@ function DashboardContent() {
               {currentTab === "AUDIT" && "Immutable Audit Trail Ledger"}
               {currentTab === "SETTINGS" && "Policy & Tolerance Thresholds"}
             </h1>
-            <Badge variant="outline" className="text-[10px] font-mono text-slate-500">
+              <Badge variant="outline" className="rounded-full border-[#00B4B3]/30 bg-[#DFF5F4] text-[10px] font-mono text-[#007A78]">
               Workspace connected
             </Badge>
           </div>

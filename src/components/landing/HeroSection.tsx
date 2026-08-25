@@ -1,206 +1,39 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
+import { ArrowDownRight, ArrowUpRight, Check, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-  FileSearch,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  Sparkles,
-  TrendingDown,
-} from "lucide-react";
 
-interface HeroSectionProps {
-  onLaunchApp: () => void;
-}
+interface HeroSectionProps { onLaunchApp: () => void; }
 
 export function HeroSection({ onLaunchApp }: HeroSectionProps) {
   return (
-    <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28 bg-gradient-to-b from-[#EDF4FA]/60 via-[#F8FAFC] to-white">
-      {/* Background Decorative Grid Glow */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#CFE3F115_1px,transparent_1px),linear-gradient(to_bottom,#CFE3F115_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-          {/* Left Column: Headline & Value Proposition */}
-          <div className="lg:col-span-7 flex flex-col items-center text-center lg:items-start lg:text-left space-y-6">
-            {/* Innovation Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#8FB8D6]/60 shadow-2xs text-xs font-semibold text-[#243A5E]">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Evidence-led reconciliation for 3PL teams</span>
-            </div>
-
-            {/* Main Title */}
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl tracking-tight text-[#12203A] leading-[1.08]">
-              Make every 3PL charge{" "}
-              <span className="text-[#0077CC]">
-                accountable
-              </span>
-            </h1>
-
-            {/* Description */}
-            <p className="text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-              Reconcile invoices against shipment evidence and contracted rates. Surface overcharges, missing documents, and exceptions with a clear trail for review.
-            </p>
-
-            {/* Key Value Bullets */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full pt-2">
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-700 bg-white/80 border border-slate-200/80 px-3 py-2 rounded-lg">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span>Zero AI Hallucinations</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-700 bg-white/80 border border-slate-200/80 px-3 py-2 rounded-lg">
-                <Zap className="h-4 w-4 text-amber-500 shrink-0" />
-                <span>Fast exception review</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-700 bg-white/80 border border-slate-200/80 px-3 py-2 rounded-lg">
-                <ShieldCheck className="h-4 w-4 text-[#243A5E] shrink-0" />
-                <span>Append-Only Audit Trail</span>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center gap-3.5 pt-4 w-full sm:w-auto">
-              <Button
-                onClick={onLaunchApp}
-                size="lg"
-                className="w-full sm:w-auto bg-[#243A5E] text-white hover:bg-[#1C2E4A] gap-2 text-base px-7 shadow-md group"
-              >
-                <span>Launch Reviewer Workspace</span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                  const el = document.getElementById("interactive-demo");
-                  el?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="w-full sm:w-auto text-slate-700 border-slate-300 hover:bg-slate-100 text-base"
-              >
-                Try Live Interactive Demo
-              </Button>
-            </div>
-
-            {/* Social Proof Subtext */}
-            <div className="flex items-center gap-4 text-xs text-slate-500 pt-2">
-              <span className="flex items-center gap-1 font-semibold text-slate-700">
-                <TrendingDown className="h-4 w-4 text-emerald-600" />
-                Save up to 12.4% on 3PL freight spend
-              </span>
-              <span>•</span>
-              <span>100% Deterministic Financial Math</span>
+    <section className="relative isolate overflow-hidden bg-[#E6EEF5] pt-20 pb-24 md:pt-28 md:pb-40">
+      <div className="absolute inset-0 pointer-events-none hero-grid" />
+      <Image src="/polygon-asymmetric.svg" alt="" width={574} height={574} className="hero-polygon hero-polygon-left" aria-hidden="true" />
+      <Image src="/polygon-symmetric.svg" alt="" width={539} height={539} className="hero-polygon hero-polygon-right" aria-hidden="true" />
+      <div className="relative z-10 mx-auto grid max-w-[1440px] items-center gap-16 px-5 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,.95fr)] lg:px-12">
+        <div className="max-w-4xl">
+          <p className="hero-reveal mb-8 text-sm font-semibold tracking-[0.16em] text-[#0077CC]">THE VERIFLOW OPERATING LAYER</p>
+          <h1 className="hero-reveal hero-reveal-delay-1 font-display max-w-6xl text-[clamp(3.4rem,6.6vw,7.25rem)] leading-[.92] tracking-tight text-[#12203A] text-balance">From disconnected documents to <span className="text-[#0077CC]">verified transactions.</span></h1>
+          <p className="hero-reveal hero-reveal-delay-2 mt-9 max-w-[58ch] text-lg leading-8 text-[#55637A] md:text-xl">Veriflow gives 3PL finance teams one visual trail from billed amount to source document, contracted rate, and human decision.</p>
+          <div className="hero-reveal hero-reveal-delay-3 mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button onClick={onLaunchApp} size="lg" className="group h-14 rounded-full bg-[#243A5E] px-7 text-white shadow-[0_18px_42px_rgba(36,58,94,.22)] transition-transform hover:-translate-y-1 hover:bg-[#174C84] active:translate-y-0">Open reviewer workspace <ArrowUpRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" /></Button>
+            <a href="#how-it-works" className="inline-flex h-14 items-center justify-center rounded-full px-6 text-sm font-semibold text-[#243A5E] transition-colors hover:bg-white/70">See how evidence connects <ArrowDownRight className="ml-2 h-4 w-4" /></a>
+          </div>
+        </div>
+        <div className="hero-reveal hero-reveal-delay-2 relative min-h-[530px] lg:min-h-[620px]">
+          <div className="audit-orbit absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#0077CC]/20" />
+          <div className="audit-orbit audit-orbit-slow absolute left-1/2 top-1/2 h-[540px] w-[540px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-[#00B4B3]/25" />
+          <div className="relative z-10 mx-auto mt-8 max-w-[480px] rotate-[3deg] rounded-[2rem] border border-white/80 bg-white/85 p-3 shadow-[0_35px_90px_rgba(36,58,94,.18)] backdrop-blur-xl transition-transform duration-700 hover:rotate-0">
+            <div className="rounded-[1.45rem] bg-[#F7F9FB] p-5 sm:p-7">
+              <div className="flex items-center justify-between border-b border-[#CDDBE8] pb-5"><div><span className="font-mono text-[10px] uppercase tracking-[.18em] text-[#7C879C]">Review case</span><strong className="mt-1 block text-lg text-[#12203A]">INV-2408-019</strong></div><span className="flex items-center gap-1.5 text-xs font-semibold text-[#007A78]"><span className="h-2 w-2 rounded-full bg-[#00B4B3]" /> Evidence linked</span></div>
+              <div className="mt-7 rounded-2xl border border-[#CDDBE8] bg-white p-4"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E6EEF5] text-[#0077CC]"><FileText className="h-5 w-5" /></span><div><strong className="block text-sm text-[#12203A]">Fuel surcharge</strong><span className="text-xs text-[#7C879C]">Invoice against rate agreement</span></div></div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-[#F7F9FB] p-3"><span className="block text-[10px] uppercase tracking-wider text-[#7C879C]">Billed</span><strong className="mt-1 block text-lg font-bold text-[#12203A]">18%</strong></div><div className="rounded-xl bg-[#DFF5F4] p-3"><span className="block text-[10px] uppercase tracking-wider text-[#007A78]">Contract</span><strong className="mt-1 block text-lg font-bold text-[#007A78]">14%</strong></div></div></div>
+              <div className="mt-4 rounded-2xl bg-[#243A5E] p-5 text-white"><div className="flex items-center justify-between"><span className="text-sm text-[#DCE8F5]">Decision path</span><span className="font-mono text-xs text-[#8FD7D4]">3 / 3</span></div><div className="mt-4 flex items-center gap-2 text-xs"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00B4B3] text-[#12203A]"><Check className="h-4 w-4" /></span><span>Document evidence</span><i className="h-px flex-1 bg-white/20" /><span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00B4B3] text-[#12203A]"><Check className="h-4 w-4" /></span><span>Human review</span></div></div>
             </div>
           </div>
-
-          {/* Right Column: Live Interactive Visual Mockup Preview */}
-          <div className="lg:col-span-5 relative">
-            <div className="relative mx-auto max-w-md lg:max-w-none">
-              {/* Glow backdrop */}
-              <div className="absolute -inset-1.5 bg-gradient-to-r from-[#8FB8D6] to-[#5F86A6] rounded-2xl blur-lg opacity-40 group-hover:opacity-60 transition duration-1000" />
-
-              {/* Main Enterprise Card Container */}
-              <div className="relative rounded-2xl bg-white border border-slate-200/90 shadow-xl overflow-hidden text-slate-800">
-                {/* Window Top Bar */}
-                <div className="bg-[#243A5E] px-4 py-3 text-white flex items-center justify-between border-b border-slate-700">
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                    </div>
-                    <span className="text-xs font-mono text-[#CFE3F1] ml-2">
-                      TXN-000019 • Live Audit
-                    </span>
-                  </div>
-                  <Badge variant="destructive" className="text-[10px] py-0">
-                    RATE_OVERCHARGE
-                  </Badge>
-                </div>
-
-                {/* Card Content Preview */}
-                <div className="p-4 sm:p-5 space-y-4">
-                  {/* Discrepancy Spotlight Alert */}
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                    <div className="text-xs">
-                      <span className="font-bold text-rose-900 block">
-                        Fuel Surcharge Overcharge Detected
-                      </span>
-                      <span className="text-rose-700">
-                        Invoice charges <strong>18%</strong> (Rp 200.730) while Agreement <strong>CTR-001</strong> specifies <strong>14%</strong> (Rp 156.124).
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Financial Comparison Split */}
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-center">
-                    <div>
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                        Billed by 3PL
-                      </span>
-                      <span className="text-sm font-bold text-slate-900 font-tabular">
-                        Rp 1.379.797
-                      </span>
-                    </div>
-                    <div className="border-l border-slate-200 pl-3">
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                        Contract Audited
-                      </span>
-                      <span className="text-sm font-bold text-emerald-700 font-tabular">
-                        Rp 1.183.028
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Variance Banner */}
-                  <div className="flex items-center justify-between px-3.5 py-2 rounded-lg bg-rose-100/60 border border-rose-200 text-xs">
-                    <span className="font-semibold text-rose-900">
-                      Recoverable Overcharge
-                    </span>
-                    <span className="font-extrabold text-rose-700 font-tabular text-sm">
-                      +Rp 196.769 (14.2%)
-                    </span>
-                  </div>
-
-                  {/* Document Proof BBox Mock */}
-                  <div className="border border-dashed border-slate-300 rounded-xl p-3 bg-white text-[11px] space-y-2">
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="flex items-center gap-1 font-medium text-slate-700">
-                        <FileText className="h-3.5 w-3.5 text-[#5F86A6]" />
-                        Invoice Evidence Bounding Box
-                      </span>
-                      <span className="font-mono text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                        Conf: 99.4%
-                      </span>
-                    </div>
-                    <div className="relative bg-slate-50 p-2.5 rounded border border-slate-200 font-mono text-[11px] text-slate-700">
-                      <span>Billed Fuel (18%): </span>
-                      <span className="bg-rose-100 text-rose-800 px-1 py-0.5 rounded border border-rose-300 font-bold">
-                        Rp 200.730 [x: 0.65, y: 0.85]
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* CTA Action in Mock */}
-                  <div className="pt-1">
-                    <button
-                      onClick={onLaunchApp}
-                      className="w-full py-2 px-3 bg-[#243A5E] text-white hover:bg-[#1C2E4A] rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
-                    >
-                      <Sparkles className="h-3.5 w-3.5 text-[#8FB8D6]" />
-                      <span>Inspect in Dual-Pane Workspace ➔</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div className="hero-float-card absolute bottom-0 left-0 z-20 max-w-[210px] rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_18px_40px_rgba(36,58,94,.16)] backdrop-blur-xl"><span className="font-mono text-[10px] uppercase tracking-widest text-[#7C879C]">Recoverable</span><strong className="mt-1 block text-2xl text-[#243A5E]">Rp 196.769</strong><span className="mt-1 block text-xs text-[#007A78]">Exception surfaced before approval</span></div>
         </div>
       </div>
     </section>

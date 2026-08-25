@@ -117,11 +117,11 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="w-64 bg-[#1B2A4A] text-slate-200 flex flex-col justify-between border-r border-[#243A5E]/60 shrink-0 h-screen sticky top-0 font-sans select-none">
+    <aside className="w-72 bg-[#E6EEF5] text-[#55637A] flex flex-col justify-between border-r border-[#CDDBE8] shrink-0 h-screen sticky top-0 font-sans select-none">
       {/* Brand Header */}
-      <div className="p-4 border-b border-[#243A5E]/70">
+      <div className="m-3 rounded-3xl border border-white/80 bg-white/75 p-4 shadow-[0_12px_30px_rgba(36,58,94,.08)]">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <VeriflowLogo variant="light" className="h-8 w-auto" />
+          <VeriflowLogo className="h-8 w-auto" />
         </Link>
       </div>
 
@@ -129,7 +129,7 @@ export function Sidebar({
       <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto custom-scrollbar">
         {sections.map((section) => (
           <div key={section.title} className="space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[.16em] text-[#7C879C]">
               {section.title}
             </div>
             <div className="space-y-0.5">
@@ -143,13 +143,13 @@ export function Sidebar({
                     disabled={item.disabled}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all cursor-pointer ${
                       isActive
-                        ? "bg-sky-500 text-white font-bold shadow-xs"
+                        ? "bg-[#243A5E] text-white font-bold shadow-[0_10px_20px_rgba(36,58,94,.18)]"
                         : item.disabled
                         ? "text-slate-500 opacity-40 cursor-not-allowed"
-                        : "text-slate-300 font-medium hover:bg-white/5 hover:text-white"
+                        : "text-[#55637A] font-medium hover:bg-white/70 hover:text-[#243A5E]"
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
+                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#8FD7D4]" : "text-[#7C879C]"}`} />
                     <span className="truncate">{item.label}</span>
                   </button>
                 );
@@ -160,12 +160,12 @@ export function Sidebar({
       </nav>
 
       {/* Footer Navigation */}
-      <div className="p-3 border-t border-[#243A5E]/70 space-y-1">
+      <div className="m-3 rounded-2xl border border-[#CDDBE8] bg-white/60 p-3 space-y-1">
         <Link
           href="/login"
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-rose-300 hover:bg-rose-900/30 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-[#A34457] hover:bg-[#FDECEF] transition-colors"
         >
-          <LogOut className="h-4 w-4 text-rose-400" />
+          <LogOut className="h-4 w-4 text-[#D6455A]" />
           <span>Sign Out</span>
         </Link>
       </div>

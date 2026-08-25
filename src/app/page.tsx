@@ -23,9 +23,13 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-[#8FB8D6]/40 selection:text-[#243A5E]">
+    <div className="min-h-screen overflow-x-hidden bg-[#F7F9FB] text-[#12203A] flex flex-col font-sans selection:bg-[#00B4B3]/20 selection:text-[#243A5E]">
       {/* Top Sticky Navbar with Sign In & Go to Dashboard Buttons */}
-      <Navbar onLaunchApp={handleLaunchDashboard} />
+      <Navbar 
+        onLaunchApp={handleLaunchDashboard} 
+        // make it sticky at the top of the page with a shadow and a semi-transparent background
+        className="fixed"
+      />
 
       {/* Hero Section with Interactive Mockup */}
       <HeroSection onLaunchApp={handleLaunchDashboard} />
@@ -46,7 +50,7 @@ export default function Home() {
       <BenchmarkMetrics />
 
       {/* Transparent SaaS Pricing Plans */}
-      <PricingSection onLaunchApp={handleLaunchDashboard} />
+      {/* <PricingSection onLaunchApp={handleLaunchDashboard} /> */}
 
       {/* Frequently Asked Questions */}
       <FAQSection />
