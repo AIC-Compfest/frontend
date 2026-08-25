@@ -61,36 +61,36 @@ export function FeaturesSection() {
             </div>
           </article>
 
-          <article className="group relative min-h-[260px] overflow-hidden rounded-[2rem] border border-[#CDDBE8] bg-white p-8 md:col-span-4 md:p-9">
+          <article className="group relative min-h-[218px] overflow-hidden rounded-[2rem] border border-[#CDDBE8] bg-white p-8 md:col-span-4 md:p-9">
             <Calculator className="h-7 w-7 text-[#0077CC]" />
-            <h3 className="mt-14 text-2xl font-semibold tracking-[-.03em] text-[#12203A]">
+            <h3 className="mt-4 text-2xl font-semibold tracking-[-.03em] text-[#12203A]">
               Rules handle the money.
             </h3>
-            <p className="mt-4 text-sm leading-6 text-[#55637A]">
+            <p className="mt-2 text-sm leading-6 text-[#55637A]">
               Rates, surcharges, tax, and tolerance checks stay reproducible.
             </p>
             <span className="absolute bottom-8 right-8 text-4xl font-bold text-[#E6EEF5]">
               01
             </span>
           </article>
-          <article className="group relative min-h-[260px] overflow-hidden rounded-[2rem] bg-[#DFF5F4] p-8 md:col-span-4 md:p-9">
+          <article className="group relative min-h-[218px] overflow-hidden rounded-[2rem] bg-[#DFF5F4] p-8 md:col-span-4 md:p-9">
             <PenTool className="h-7 w-7 text-[#007A78]" />
-            <h3 className="mt-14 text-2xl font-semibold tracking-[-.03em] text-[#12203A]">
+            <h3 className="mt-4 text-2xl font-semibold tracking-[-.03em] text-[#12203A]">
               Humans keep authority.
             </h3>
-            <p className="mt-4 text-sm leading-6 text-[#366C6B]">
+            <p className="mt-2 text-sm leading-6 text-[#366C6B]">
               The system prioritizes uncertainty. Your reviewer makes the call.
             </p>
             <span className="absolute bottom-8 right-8 text-4xl font-bold text-white/80">
               02
             </span>
           </article>
-          <article className="group relative min-h-[260px] overflow-hidden rounded-[2rem] border border-[#CDDBE8] bg-[#E6EEF5] p-8 md:col-span-12 md:p-9">
+          <article className="group relative min-h-[218px] overflow-hidden rounded-[2rem] border border-[#CDDBE8] bg-[#E6EEF5] p-8 md:col-span-12 md:p-9">
             <FileCheck2 className="h-7 w-7 text-[#174C84]" />
-            <h3 className="mt-14 text-2xl font-semibold tracking-[-.03em] text-[#12203A]">
+            <h3 className="mt-4 text-2xl font-semibold tracking-[-.03em] text-[#12203A]">
               Exceptions become action.
             </h3>
-            <p className="mt-4 text-sm leading-6 text-[#55637A]">
+            <p className="mt-2 text-sm leading-6 text-[#55637A]">
               Turn a confirmed overcharge into an evidence-backed dispute
               package.
             </p>

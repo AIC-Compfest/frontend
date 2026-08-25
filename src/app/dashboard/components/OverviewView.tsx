@@ -136,9 +136,6 @@ export function OverviewView({
                   <Inbox className="h-4 w-4 text-sky-600" />
                   Review Queue &amp; Transaksi
                 </span>
-                <Badge variant="outline" className="bg-white text-slate-700 font-bold text-xs border-slate-200 px-2 py-0.5 font-mono">
-                  Workspace connected
-                </Badge>
               </div>
 
               <div className="space-y-1">

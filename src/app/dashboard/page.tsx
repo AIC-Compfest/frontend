@@ -156,9 +156,9 @@ function DashboardContent() {
               {currentTab === "AUDIT" && "Immutable Audit Trail Ledger"}
               {currentTab === "SETTINGS" && "Policy & Tolerance Thresholds"}
             </h1>
-              <Badge variant="outline" className="rounded-full border-[#00B4B3]/30 bg-[#DFF5F4] text-[10px] font-mono text-[#007A78]">
+            {/* <Badge variant="outline" className="rounded-full border-[#00B4B3]/30 bg-[#DFF5F4] text-[10px] font-mono text-[#007A78]">
               Workspace connected
-            </Badge>
+            </Badge> */}
           </div>
 
           <div className="flex items-center gap-3">
