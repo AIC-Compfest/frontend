@@ -1,20 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Play,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
+  ArrowUpRight,
   Calculator,
-  ShieldAlert,
-  ArrowRight,
-  Sparkles,
-  Zap,
+  FileSearch,
+  ShieldCheck,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Scenario {
   id: string;
@@ -31,250 +24,230 @@ interface Scenario {
   auditTrail: string;
   sampleBBox: string;
 }
-
 const SCENARIOS: Scenario[] = [
   {
     id: "RATE_OVERCHARGE",
-    name: "Scenario A: Fuel Surcharge Overcharge",
+    name: "Fuel surcharge overcharge",
     badge: "EXCEPTION",
     badgeVariant: "destructive",
-    route: "Jakarta ➔ Surabaya (183.8 kg)",
+    route: "Jakarta to Surabaya, 183.8 kg",
     billedAmount: 1379797,
     expectedAmount: 1183028,
     difference: 196769,
     discrepancyType: "RATE_OVERCHARGE",
     explanation:
-      "3PL Invoice charges 18% fuel surcharge (Rp 200.730). Master Agreement CTR-001 specifies maximum 14% (Rp 156.124).",
-    formula:
-      "Base Rate (Rp 934.904) + Fuel 14% (Rp 130.887) + PPN 11% (Rp 117.237) = Expected Rp 1.183.028 | Billed Rp 1.379.797",
-    auditTrail: "2026-08-18 10:14:02 UTC | SYSTEM_RECONCILE_ENGINE | Flagged RATE_OVERCHARGE (Variance: +Rp 196.769)",
-    sampleBBox: "Invoice Page 1 • [x: 0.65, y: 0.85, w: 0.30, h: 0.05] (Confidence: 99.4%)",
+      "The invoice applies an 18% fuel surcharge. Agreement CTR-001 caps the charge at 14%.",
+    formula: "Base rate + contract fuel surcharge + PPN = expected amount",
+    auditTrail: "10:14:02  SYSTEM_RECONCILE_ENGINE  Flagged RATE_OVERCHARGE",
+    sampleBBox: "Invoice page 1 / fuel surcharge / confidence 99.4%",
   },
   {
     id: "CLEAN_MATCH",
-    name: "Scenario B: 100% Clean Baseline Match",
+    name: "Clean baseline match",
     badge: "MATCH",
     badgeVariant: "success",
-    route: "Surabaya ➔ Jakarta (90.11 kg)",
+    route: "Surabaya to Jakarta, 90.11 kg",
     billedAmount: 607392,
     expectedAmount: 607392,
     difference: 0,
-    discrepancyType: "NONE (AUTO-PASS ELIGIBLE)",
+    discrepancyType: "NONE",
     explanation:
-      "Invoice, Surat Jalan physical weight (84.33 kg), POD wet signature, and Contract tier all match with 0% variance.",
-    formula:
-      "Base Rate (Rp 480.000) + Fuel 14% (Rp 67.200) + PPN 11% (Rp 60.192) = Expected Rp 607.392 | Billed Rp 607.392",
-    auditTrail: "2026-08-18 10:14:00 UTC | SYSTEM_RECONCILE_ENGINE | Auto-Passed 13/13 Verification Checks",
-    sampleBBox: "Invoice Page 1 • Total Match [x: 0.70, y: 0.88] (Confidence: 99.8%)",
+      "Invoice, physical weight, signed POD, and contract tier match with zero variance.",
+    formula: "Base rate + contract fuel surcharge + PPN = billed amount",
+    auditTrail: "10:14:00  SYSTEM_RECONCILE_ENGINE  Auto-passed 13 checks",
+    sampleBBox: "Invoice page 1 / total / confidence 99.8%",
   },
   {
     id: "WRONG_ZONE",
-    name: "Scenario C: Wrong Tariff Zone Mapping",
+    name: "Wrong tariff zone",
     badge: "EXCEPTION",
     badgeVariant: "destructive",
-    route: "Jakarta ➔ Semarang (Billed as Surabaya)",
+    route: "Jakarta to Semarang, billed as Surabaya",
     billedAmount: 785000,
     expectedAmount: 557228,
     difference: 227772,
     discrepancyType: "WRONG_ZONE",
     explanation:
-      "Surat Jalan proves destination is SEMARANG, but 3PL invoiced using the more expensive SURABAYA rate matrix.",
-    formula:
-      "Semarang Contract Base (Rp 450.000) vs Surabaya Invoiced Base (Rp 630.000) -> Overcharge: +Rp 227.772",
-    auditTrail: "2026-08-18 10:14:05 UTC | SYSTEM_RECONCILE_ENGINE | Flagged WRONG_ZONE against Surat Jalan destination",
-    sampleBBox: "Surat Jalan Page 1 • Destination 'SEMARANG' [x: 0.40, y: 0.35]",
+      "The Surat Jalan proves Semarang as the destination, but the invoice uses the higher Surabaya rate matrix.",
+    formula: "Semarang contract base versus Surabaya invoiced base",
+    auditTrail: "10:14:05  SYSTEM_RECONCILE_ENGINE  Flagged WRONG_ZONE",
+    sampleBBox: "Surat Jalan page 1 / destination / confidence 98.8%",
   },
   {
     id: "QUANTITY_MISMATCH",
-    name: "Scenario D: Missing Physical Cartons on POD",
-    badge: "EXCEPTION",
+    name: "POD quantity mismatch",
+    badge: "REVIEW",
     badgeVariant: "warning",
-    route: "Bandung ➔ Jakarta (Industrial FMCG)",
+    route: "Bandung to Jakarta, industrial FMCG",
     billedAmount: 850000,
     expectedAmount: 850000,
     difference: 0,
     discrepancyType: "QUANTITY_MISMATCH",
     explanation:
-      "Invoice charges full 25 cartons, but receiver POD physically noted and signed for only 21 cartons (4 missing).",
-    formula:
-      "Billed Quantity (25 koli) - Received Quantity on POD (21 koli) = 4 Missing Cartons Pending Credit Note",
-    auditTrail: "2026-08-18 10:14:08 UTC | SYSTEM_RECONCILE_ENGINE | Quantity received 21 < Billed 25 on signed POD",
-    sampleBBox: "POD Page 1 • Signed Quantity '21 KOLI' [x: 0.20, y: 0.50]",
+      "The invoice charges 25 cartons while the signed POD records 21 received cartons.",
+    formula: "25 billed cartons minus 21 received cartons = 4 pending credit",
+    auditTrail: "10:14:08  SYSTEM_RECONCILE_ENGINE  Sent to human review",
+    sampleBBox: "POD page 1 / received quantity / confidence 96.2%",
   },
 ];
 
 interface InteractiveSimulatorProps {
   onLaunchApp: () => void;
 }
-
-export function InteractiveSimulator({ onLaunchApp }: InteractiveSimulatorProps) {
-  const [selectedScenario, setSelectedScenario] = useState<Scenario>(SCENARIOS[0]);
-
-  const formatIDR = (val: number) => {
-    return new Intl.NumberFormat("id-ID", {
+export function InteractiveSimulator({
+  onLaunchApp,
+}: InteractiveSimulatorProps) {
+  const [selectedScenario, setSelectedScenario] = useState(SCENARIOS[0]);
+  const formatIDR = (value: number) =>
+    new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       maximumFractionDigits: 0,
-    }).format(val);
-  };
-
+    }).format(value);
+  const isMatch = selectedScenario.badgeVariant === "success";
   return (
-    <section id="interactive-demo" className="py-20 bg-white border-b border-slate-200/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        {/* Section Title */}
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <Badge variant="secondary" className="px-3 py-1 text-xs uppercase tracking-wider font-bold">
-            Interactive Test Drive
-          </Badge>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#243A5E] tracking-tight">
-            Simulate Real 3PL Discrepancy Audits in Real-Time
-          </h2>
-          <p className="text-slate-600 text-sm sm:text-base">
-            Select a logistics scenario to see how Veriflow connects evidence, checks contract terms, and flags overcharges for review.
+    <section
+      id="interactive-demo"
+      className="relative overflow-hidden bg-[#F7F9FB] py-32 md:py-44"
+    >
+      <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+        <div className="grid items-end gap-10 lg:grid-cols-[.8fr_1.2fr]">
+          <div>
+            <p className="text-sm font-semibold tracking-[.16em] text-[#0077CC]">
+              SEE THE TRACE
+            </p>
+            <h2 className="mt-7 font-display text-5xl leading-[.98] tracking-tight text-[#12203A] md:text-7xl">
+              Watch one charge become a clear decision.
+            </h2>
+          </div>
+          <p className="max-w-xl justify-self-end text-lg leading-8 text-[#55637A]">
+            Choose a case. The interface follows the same path your reviewer
+            sees: evidence, rules, and a decision that can be explained.
           </p>
         </div>
-
-        {/* Scenario Selection Tabs */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-          {SCENARIOS.map((sc) => (
-            <button
-              key={sc.id}
-              onClick={() => setSelectedScenario(sc)}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                selectedScenario.id === sc.id
-                  ? "bg-[#243A5E] text-white shadow-md scale-102"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200/80"
-              }`}
-            >
-              {sc.name.split(":")[0]}
-            </button>
-          ))}
-        </div>
-
-        {/* Live Simulation Card */}
-        <div className="max-w-5xl mx-auto rounded-2xl border border-slate-200/90 bg-[#F8FAFC] shadow-lg overflow-hidden">
-          {/* Header Bar */}
-          <div className="bg-[#243A5E] p-4 text-white flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8FB8D6] text-[#243A5E]">
-                <Zap className="h-4 w-4 fill-[#243A5E]" />
-              </div>
-              <div>
-                <span className="font-bold text-sm block">{selectedScenario.name}</span>
-                <span className="text-xs text-[#CFE3F1] font-mono">{selectedScenario.route}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[#CFE3F1] font-mono hidden sm:inline">Execution Time: 82.8 µs</span>
-              <Badge
-                variant={selectedScenario.badgeVariant === "success" ? "success" : "destructive"}
-                className="text-xs font-bold"
+        <div className="mt-16 grid gap-5 lg:grid-cols-[260px_1fr]">
+          <div className="space-y-2">
+            {SCENARIOS.map((scenario, index) => (
+              <button
+                key={scenario.id}
+                type="button"
+                onClick={() => setSelectedScenario(scenario)}
+                className={`group flex w-full items-center gap-3 rounded-2xl p-4 text-left transition-all ${selectedScenario.id === scenario.id ? "bg-[#243A5E] text-white shadow-[0_16px_36px_rgba(36,58,94,.18)]" : "bg-white text-[#55637A] hover:bg-[#E6EEF5]"}`}
               >
-                {selectedScenario.badge}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Body Split Grid */}
-          <div className="p-6 grid md:grid-cols-12 gap-6">
-            {/* Left: Financial Math & Findings (7 Cols) */}
-            <div className="md:col-span-7 space-y-4">
-              <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-3">
-                <span className="text-xs font-bold text-[#5F86A6] uppercase tracking-wider block">
-                  Deterministic Financial Comparison
+                <span
+                  className={`font-mono text-xs ${selectedScenario.id === scenario.id ? "text-[#8FD7D4]" : "text-[#7C879C]"}`}
+                >
+                  0{index + 1}
                 </span>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2.5 bg-slate-50 rounded-lg">
-                    <span className="text-[10px] text-slate-500 block">Billed Charge</span>
-                    <span className="font-extrabold text-slate-900 text-sm font-tabular">
-                      {formatIDR(selectedScenario.billedAmount)}
+                <span className="text-sm font-semibold">{scenario.name}</span>
+                <ArrowUpRight
+                  className={`ml-auto h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 ${selectedScenario.id === scenario.id ? "text-[#8FD7D4]" : "text-[#7C879C]"}`}
+                />
+              </button>
+            ))}
+          </div>
+          <div className="relative overflow-hidden rounded-[2rem] bg-[#E6EEF5] p-5 shadow-[0_24px_70px_rgba(36,58,94,.10)] md:p-8">
+            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-[#0077CC]/20" />
+            <div className="relative grid gap-5 md:grid-cols-[1.1fr_.9fr]">
+              <div>
+                <div className="flex items-center justify-between border-b border-[#CDDBE8] pb-5">
+                  <div>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-[#7C879C]">
+                      Live case
                     </span>
+                    <h3 className="mt-2 font-display text-3xl tracking-normal text-[#12203A]">
+                      {selectedScenario.name}
+                    </h3>
+                    <p className="mt-1 text-sm text-[#55637A]">
+                      {selectedScenario.route}
+                    </p>
                   </div>
-                  <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200/60">
-                    <span className="text-[10px] text-emerald-700 block">Audited Expected</span>
-                    <span className="font-extrabold text-emerald-800 text-sm font-tabular">
-                      {formatIDR(selectedScenario.expectedAmount)}
+                  <span
+                    className={`rounded-lg px-3 py-2 text-xs font-bold ${isMatch ? "bg-[#DFF5F4] text-[#007A78]" : "bg-[#FDECEF] text-[#A34457]"}`}
+                  >
+                    {selectedScenario.badge}
+                  </span>
+                </div>
+                <div className="mt-5 grid grid-cols-3 gap-3">
+                  <div className="rounded-2xl bg-white p-4">
+                    <span className="block text-[10px] uppercase tracking-wider text-[#7C879C]">
+                      Billed
                     </span>
+                    <strong className="mt-2 block text-base font-bold text-[#12203A] tabular-nums">
+                      {formatIDR(selectedScenario.billedAmount)}
+                    </strong>
+                  </div>
+                  <div className="rounded-2xl bg-[#DFF5F4] p-4">
+                    <span className="block text-[10px] uppercase tracking-wider text-[#007A78]">
+                      Expected
+                    </span>
+                    <strong className="mt-2 block text-base font-bold text-[#007A78] tabular-nums">
+                      {formatIDR(selectedScenario.expectedAmount)}
+                    </strong>
                   </div>
                   <div
-                    className={`p-2.5 rounded-lg border ${
-                      selectedScenario.difference > 0
-                        ? "bg-rose-50 border-rose-200 text-rose-700"
-                        : "bg-slate-50 border-slate-200 text-slate-700"
-                    }`}
+                    className={`rounded-2xl p-4 ${selectedScenario.difference ? "bg-[#FDECEF] text-[#A34457]" : "bg-white text-[#55637A]"}`}
                   >
-                    <span className="text-[10px] block font-semibold">
-                      {selectedScenario.difference > 0 ? "Overcharge" : "Variance"}
+                    <span className="block text-[10px] uppercase tracking-wider">
+                      Variance
                     </span>
-                    <span className="font-extrabold text-sm font-tabular">
-                      {selectedScenario.difference > 0 ? `+${formatIDR(selectedScenario.difference)}` : "Rp 0"}
-                    </span>
+                    <strong className="mt-2 block text-base font-bold tabular-nums">
+                      {selectedScenario.difference
+                        ? `+${formatIDR(selectedScenario.difference)}`
+                        : "Rp 0"}
+                    </strong>
                   </div>
                 </div>
-
-                {/* Formula Breakdown */}
-                <div className="p-3 bg-[#EDF4FA]/60 rounded-lg border border-[#8FB8D6]/30 text-xs space-y-1">
-                  <span className="font-bold text-[#243A5E] flex items-center gap-1.5">
-                    <Calculator className="h-3.5 w-3.5" />
-                    Transparent Mathematical Trace Log:
-                  </span>
-                  <p className="font-mono text-[11px] text-slate-700 leading-relaxed">
+                <div className="mt-5 rounded-2xl bg-white p-5">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[#243A5E]">
+                    <Calculator className="h-4 w-4 text-[#0077CC]" /> Rules
+                    calculation
+                  </div>
+                  <p className="mt-4 font-mono text-xs leading-6 text-[#55637A]">
                     {selectedScenario.formula}
                   </p>
                 </div>
-              </div>
-
-              {/* Finding Description */}
-              <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-1.5">
-                <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
-                  <AlertTriangle
-                    className={`h-4 w-4 ${
-                      selectedScenario.badgeVariant === "success" ? "text-emerald-600" : "text-rose-600"
-                    }`}
-                  />
-                  AI Discrepancy Classification:
-                </span>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="mt-5 max-w-xl text-sm leading-6 text-[#55637A]">
                   {selectedScenario.explanation}
                 </p>
               </div>
-            </div>
-
-            {/* Right: Spatial BBox Evidence & Audit Trail (5 Cols) */}
-            <div className="md:col-span-5 space-y-4">
-              <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2.5 text-xs">
-                <span className="font-bold text-slate-900 block flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-[#5F86A6]" />
-                  Spatial Proof Provenance:
-                </span>
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200/80 font-mono text-[11px] text-slate-700">
-                  {selectedScenario.sampleBBox}
+              <div className="flex flex-col justify-between rounded-2xl bg-[#243A5E] p-6 text-white">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">
+                      Evidence trail
+                    </span>
+                    <FileSearch className="h-5 w-5 text-[#8FD7D4]" />
+                  </div>
+                  <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-4">
+                    <span className="font-mono text-xs leading-6 text-[#DCE8F5]">
+                      {selectedScenario.sampleBBox}
+                    </span>
+                  </div>
+                  <div className="mt-5 flex items-start gap-3">
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#8FD7D4]" />
+                    <p className="text-xs leading-5 text-[#DCE8F5]">
+                      Evidence is linked before a reviewer acts. No unsupported
+                      value is silently promoted to truth.
+                    </p>
+                  </div>
                 </div>
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500">Hallucination Risk:</span>
-                  <span className="font-bold text-emerald-600">0.0% (Deterministic)</span>
+                <div className="mt-10 border-t border-white/15 pt-5">
+                  <span className="text-[10px] uppercase tracking-widest text-[#8FD7D4]">
+                    Audit ledger
+                  </span>
+                  <p className="mt-2 font-mono text-[11px] leading-5 text-[#DCE8F5]">
+                    {selectedScenario.auditTrail}
+                  </p>
+                  <Button
+                    onClick={onLaunchApp}
+                    className="mt-6 w-full rounded-full bg-[#00B4B3] text-[#12203A] hover:bg-[#8FD7D4]"
+                  >
+                    Inspect in workspace{" "}
+                    <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Audit Log Preview */}
-              <div className="p-4 bg-[#243A5E] text-white rounded-xl space-y-2 text-xs">
-                <span className="font-bold text-[#CFE3F1] block flex items-center gap-1.5">
-                  <ShieldAlert className="h-3.5 w-3.5 text-[#8FB8D6]" />
-                  Immutable Audit Ledger:
-                </span>
-                <p className="font-mono text-[10px] text-slate-300 leading-normal">
-                  {selectedScenario.auditTrail}
-                </p>
-              </div>
-
-              {/* Action Button */}
-              <Button
-                onClick={onLaunchApp}
-                className="w-full bg-[#243A5E] text-white hover:bg-[#1C2E4A] gap-2 text-xs font-bold py-2.5"
-              >
-                <span>Inspect Full 20-Transaction Queue in App</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
             </div>
           </div>
         </div>

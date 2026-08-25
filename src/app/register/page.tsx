@@ -48,7 +48,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FB] flex flex-col justify-between font-sans selection:bg-[#00B4B3]/20 selection:text-[#243A5E]">
+    <div className="relative min-h-screen overflow-hidden bg-[#E6EEF5] flex flex-col justify-between font-sans selection:bg-[#00B4B3]/20 selection:text-[#243A5E]">
+      <div className="pointer-events-none absolute -left-48 bottom-0 h-[600px] w-[600px] bg-[url('/polygon-symmetric.svg')] bg-contain bg-no-repeat opacity-45" />
       {/* Top Header / Nav */}
       <header className="w-full border-b border-[#CDDBE8] bg-white/90 py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -67,24 +68,23 @@ export default function RegisterPage() {
       </header>
 
       {/* Main Centered Card Area */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 my-8">
+      <main className="relative z-10 flex min-h-[calc(100dvh-142px)] flex-1 items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-5xl grid lg:grid-cols-[1fr_420px] gap-10 items-center">
           <div className="hidden lg:block px-8">
             <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#0077CC]">A clearer operating rhythm</span>
             <h1 className="font-display text-5xl leading-[1.05] text-[#12203A] mt-5">A shared view of every exception.</h1>
             <p className="text-base leading-relaxed text-[#55637A] max-w-md mt-6">Set up a workspace where finance and operations teams can trace the decision from billed amount to source document.</p>
-            <div className="mt-10 h-2 max-w-md rounded-full bg-[#E6EEF5] overflow-hidden"><div className="h-full w-2/3 rounded-full bg-[#00B4B3]" /></div>
-            <p className="text-xs text-[#7C879C] mt-3">Built for evidence-led 3PL reconciliation.</p>
+            <div className="mt-10 flex items-center gap-3 text-sm text-[#55637A]"><span className="h-2 w-2 rounded-full bg-[#00B4B3]" />Built for evidence-led 3PL reconciliation.</div>
           </div>
           <div className="w-full max-w-sm mx-auto space-y-4">
-          <Card className="mx-auto border border-[#CDDBE8] shadow-[0_16px_48px_rgba(36,58,94,0.08)] bg-white rounded-3xl overflow-hidden">
-            <CardHeader className="p-6 pb-2 space-y-1">
+          <Card className="mx-auto border border-white/80 shadow-[0_24px_70px_rgba(36,58,94,0.12)] bg-white/90 rounded-[2rem] overflow-hidden backdrop-blur-xl">
+            <CardHeader className="p-8 pb-3 space-y-1">
               <CardTitle className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 Create an account
               </CardTitle>
             </CardHeader>
 
-            <CardContent className="p-6 pt-2 flex flex-col gap-4">
+            <CardContent className="p-8 pt-2 flex flex-col gap-5">
               {errorMessage && (
                 <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />

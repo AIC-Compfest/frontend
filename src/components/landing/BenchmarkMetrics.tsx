@@ -1,101 +1,91 @@
+"use client";
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { CheckCircle2, Zap, ShieldCheck, TrendingUp, Award, Layers } from "lucide-react";
+import {
+  ArrowUpRight,
+  Check,
+  Fingerprint,
+  Layers3,
+  ShieldCheck,
+} from "lucide-react";
 
 export function BenchmarkMetrics() {
   const metrics = [
-    {
-      value: "100.0%",
-      label: "Reconciliation Accuracy",
-      description: "20/20 Ground Truth Pilot Test Cases accurately resolved with zero classification errors.",
-      icon: Award,
-    },
-    {
-      value: "20 / 20",
-      label: "Reconciliation Latency",
-      description: "Ground-truth cases resolved across the current reconciliation test set.",
-      icon: Zap,
-    },
-    {
-      value: "1.0000",
-      label: "Precision & Recall (F1)",
-      description: "Zero false overcharge accusations against 3PLs and zero missed revenue leakage.",
-      icon: CheckCircle2,
-    },
-    {
-      value: "0.00%",
-      label: "False Auto-Approval Rate",
-      description: "Strict safety gate ensures anomalous invoices never bypass mandatory human review.",
-      icon: ShieldCheck,
-    },
+    ["20 / 20", "ground-truth cases resolved"],
+    ["13", "reconciliation checks"],
+    ["0.00%", "false auto-approval rate"],
   ];
-
   return (
-    <section id="benchmarks" className="py-20 bg-[#E6EEF5] text-[#12203A] relative overflow-hidden">
-      {/* Background radial accent */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#5F86A620_0,transparent_70%)] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <Badge className="bg-[#DFF5F4] text-[#243A5E] border border-[#00B4B3]/30 px-3 py-1 text-xs uppercase tracking-wider font-bold">
-            Audited Benchmark Performance
-          </Badge>
-          <h2 className="font-display text-3xl sm:text-4xl tracking-tight text-[#12203A]">
-            Mathematically Proven Accuracy & Enterprise Scale
-          </h2>
-          <p className="text-[#55637A] text-sm sm:text-base leading-relaxed">
-            Evaluated rigorously against versioned synthetic ground truth benchmarks across multiple logistics noise profiles and adversarial anomaly scenarios.
-          </p>
-        </div>
-
-        {/* 4 Metric Cards Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {metrics.map((m, i) => {
-            const Icon = m.icon;
-            return (
-              <div
-                key={i}
-                className="p-6 rounded-2xl bg-white border border-[#CDDBE8] space-y-3 hover:border-[#0077CC] transition-all group"
+    <section
+      id="benchmarks"
+      className="relative overflow-hidden bg-[#243A5E] py-32 text-white md:py-44"
+    >
+      <div className="absolute inset-0 opacity-20 hero-grid" />
+      <div className="relative mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+        <div className="grid gap-12 lg:grid-cols-[.7fr_1.3fr]">
+          <div>
+            <p className="text-sm font-semibold tracking-[.16em] text-[#8FD7D4]">
+              PROOF OVER PROMISES
+            </p>
+            <h2 className="mt-7 font-display text-5xl leading-[.98] tracking-tight md:text-7xl">
+              The safety case is visible.
+            </h2>
+            <p className="mt-8 max-w-sm text-base leading-7 text-[#DCE8F5]">
+              Veriflow measures what matters to a finance reviewer: whether a
+              decision is supported, reproducible, and safe to act on.
+            </p>
+            {/* <a
+              href="#interactive-demo"
+              className="mt-10 inline-flex items-center text-sm font-semibold text-[#8FD7D4]"
+            >
+              See the live calculation <ArrowUpRight className="ml-2 h-4 w-4" />
+            </a> */}
+          </div>
+          <div className="grid grid-flow-dense grid-cols-1 gap-4 md:grid-cols-2">
+            <article className="relative overflow-hidden rounded-[2rem] bg-[#174C84] p-8 md:col-span-2">
+              <Layers3 className="h-7 w-7 text-[#8FD7D4]" />
+              <strong className="mt-12 block font-display text-6xl tracking-normal text-white">
+                Evidence first.
+              </strong>
+              <p className="mt-4 max-w-xl text-sm leading-6 text-[#DCE8F5]">
+                Every result is a chain of extracted fields, contract rules,
+                calculations, and reviewer action.
+              </p>
+              <span className="absolute -right-10 -top-20 text-[18rem] font-bold leading-none text-white/5">
+                /
+              </span>
+            </article>
+            {metrics.map(([value, label], index) => (
+              <article
+                key={label}
+                className="group rounded-[2rem] border border-white/15 bg-white/8 p-7 transition-transform duration-500 hover:-translate-y-1"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#DFF5F4] text-[#0077CC]">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <span className="text-[10px] font-mono text-[#243A5E] bg-[#F7F9FB] px-2 py-0.5 rounded border border-[#CDDBE8]">
-                    VERIFIED
+                  <span className="font-mono text-xs text-[#8FD7D4]">
+                    0{index + 1}
                   </span>
+                  {/* <ArrowUpRight className="h-4 w-4 text-white/45 transition-transform group-hover:-translate-y-1 group-hover:translate-x-1" /> */}
                 </div>
-                <div>
-                    <span className="text-3xl sm:text-4xl font-bold text-[#12203A] font-tabular block tracking-tight">
-                    {m.value}
-                  </span>
-                  <span className="text-sm font-bold text-[#0077CC] block mt-1">
-                    {m.label}
-                  </span>
-                </div>
-                <p className="text-xs text-[#55637A] leading-relaxed border-t border-[#E6EEF5] pt-3">
-                  {m.description}
-                </p>
-              </div>
-            );
-          })}
+                <strong className="mt-12 block font-display text-4xl tracking-tight">
+                  {value}
+                </strong>
+                <p className="mt-3 text-sm leading-6 text-[#DCE8F5]">{label}</p>
+              </article>
+            ))}
+          </div>
         </div>
-
-        {/* Evaluation Summary Strip */}
-        <div className="p-4 rounded-xl bg-white border border-[#CDDBE8] flex flex-wrap items-center justify-between gap-4 text-xs text-[#55637A]">
-          <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-[#0077CC]" />
-            <span>
-              Audited against <strong>1,214 synthetic transactions</strong> across 10 dataset benchmark releases.
-            </span>
-          </div>
-          <div className="flex items-center gap-4 font-mono text-[11px]">
-            <span>Schemas: v0.1.0</span>
-            <span>•</span>
-            <span>Evidence, rules, and review in one workflow</span>
-          </div>
+        <div className="mt-16 grid gap-4 border-t border-white/15 pt-6 text-sm text-[#DCE8F5] sm:grid-cols-3">
+          <span className="flex items-center gap-3">
+            <Fingerprint className="h-5 w-5 text-[#8FD7D4]" /> Source-linked
+            fields
+          </span>
+          <span className="flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-[#8FD7D4]" /> Human decision
+            authority
+          </span>
+          <span className="flex items-center gap-3">
+            <Check className="h-5 w-5 text-[#8FD7D4]" /> Reproducible
+            calculations
+          </span>
         </div>
       </div>
     </section>

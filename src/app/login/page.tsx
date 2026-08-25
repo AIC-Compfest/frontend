@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
@@ -59,7 +58,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FB] flex flex-col justify-between font-sans selection:bg-[#00B4B3]/20 selection:text-[#243A5E]">
+    <div className="relative min-h-screen overflow-hidden bg-[#E6EEF5] flex flex-col justify-between font-sans selection:bg-[#00B4B3]/20 selection:text-[#243A5E]">
+      <div className="pointer-events-none absolute -right-40 top-20 h-[560px] w-[560px] bg-[url('/polygon-asymmetric.svg')] bg-contain bg-no-repeat opacity-50" />
       {/* Top Header / Nav */}
       <header className="w-full border-b border-[#CDDBE8] bg-white/90 py-4 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -78,7 +78,7 @@ export default function LoginPage() {
       </header>
 
       {/* Main Centered Card Area */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 my-8">
+      <main className="relative z-10 flex min-h-[calc(100dvh-142px)] flex-1 items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-5xl grid lg:grid-cols-[1fr_420px] gap-10 items-center">
           <div className="hidden lg:block px-8">
             <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#0077CC]">Reviewer workspace</span>
@@ -91,14 +91,14 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="w-full max-w-sm mx-auto space-y-4">
-          <Card className="mx-auto border border-[#CDDBE8] shadow-[0_16px_48px_rgba(36,58,94,0.08)] bg-white rounded-3xl overflow-hidden">
-            <CardHeader className="p-6 pb-2 space-y-1">
+          <Card className="mx-auto border border-white/80 shadow-[0_24px_70px_rgba(36,58,94,0.12)] bg-white/90 rounded-[2rem] overflow-hidden backdrop-blur-xl">
+            <CardHeader className="p-8 pb-3 space-y-1">
               <CardTitle className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 Log in
               </CardTitle>
             </CardHeader>
 
-            <CardContent className="p-6 pt-2 flex flex-col gap-4">
+            <CardContent className="p-8 pt-2 flex flex-col gap-5">
               {errorMessage && (
                 <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
