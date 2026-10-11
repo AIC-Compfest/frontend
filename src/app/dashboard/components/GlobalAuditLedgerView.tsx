@@ -44,6 +44,8 @@ export function GlobalAuditLedgerView({ onSelectTransaction }: GlobalAuditLedger
 
   const getActionBadge = (action: string) => {
     switch (action) {
+      case "RELEASE":
+        return <Badge variant="secondary" className="text-[10px] py-0 px-2 font-bold font-mono bg-indigo-50 text-indigo-700 border-indigo-200">RELEASE</Badge>;
       case "APPROVE":
         return <Badge variant="success" className="text-[10px] py-0 px-2 font-bold font-mono">APPROVE</Badge>;
       case "DISPUTE":
@@ -92,7 +94,7 @@ export function GlobalAuditLedgerView({ onSelectTransaction }: GlobalAuditLedger
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2">
-        {["ALL", "APPROVE", "DISPUTE", "REJECT"].map((act) => (
+        {["ALL", "RELEASE", "APPROVE", "DISPUTE", "REJECT"].map((act) => (
           <button
             key={act}
             onClick={() => setFilterAction(act)}
@@ -150,7 +152,9 @@ export function GlobalAuditLedgerView({ onSelectTransaction }: GlobalAuditLedger
                     <div
                       className={cn(
                         "absolute -left-[31px] top-1 w-3 h-3 rounded-full border-2 border-white",
-                        item.action === "APPROVE"
+                        item.action === "RELEASE"
+                          ? "bg-indigo-600 ring-2 ring-indigo-100"
+                          : item.action === "APPROVE"
                           ? "bg-emerald-600 ring-2 ring-emerald-100"
                           : item.action === "DISPUTE"
                           ? "bg-orange-600 ring-2 ring-orange-100"

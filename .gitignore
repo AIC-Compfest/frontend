@@ -40,7 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# markdown
-*.md
-reports/
-docs/
+# markdown / docs (allow README and docs)
+AGENTS.md
+CLAUDE.md
+
