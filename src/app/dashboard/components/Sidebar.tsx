@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   LayoutDashboard,
   Inbox,
-  FileSearch,
+  //FileSearch,
   UploadCloud,
   FileSpreadsheet,
   FileCheck2,
@@ -36,7 +36,6 @@ interface SidebarProps {
   queueCount: number;
   exceptionCount: number;
   userRole: string;
-  hasSelectedEvent: boolean;
 }
 
 export function Sidebar({
@@ -45,7 +44,6 @@ export function Sidebar({
   queueCount,
   exceptionCount,
   userRole,
-  hasSelectedEvent,
 }: SidebarProps) {
   const sections = [
     {
@@ -71,12 +69,12 @@ export function Sidebar({
           label: "Final Approval (SoD)",
           icon: ShieldCheck,
         },
-        {
-          id: "WORKSPACE" as DashboardTab,
-          label: "Evidence Workspace",
-          icon: FileSearch,
-          disabled: !hasSelectedEvent,
-        },
+        // {
+        //   id: "WORKSPACE" as DashboardTab,
+        //   label: "Evidence Workspace",
+        //   icon: FileSearch,
+        //   disabled: !hasSelectedEvent,
+        // },
       ],
     },
     {
@@ -139,13 +137,10 @@ export function Sidebar({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => !item.disabled && onTabChange(item.id)}
-                    disabled={item.disabled}
+                    onClick={() => onTabChange(item.id)}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all cursor-pointer ${
                       isActive
                         ? "bg-[#243A5E] text-white font-bold shadow-[0_10px_20px_rgba(36,58,94,.18)]"
-                        : item.disabled
-                        ? "text-slate-500 opacity-40 cursor-not-allowed"
                         : "text-[#55637A] font-medium hover:bg-white/70 hover:text-[#243A5E]"
                     }`}
                   >

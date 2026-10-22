@@ -20,6 +20,7 @@ import {
   FileCheck2,
   XCircle,
   Sparkles,
+  Folder,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ export function ReviewQueue({
   const [vendorFilter, setVendorFilter] = useState<string>("ALL");
   const [severityFilter, setSeverityFilter] = useState<string>("ALL");
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   const formatIDR = (val?: number | null) => {
     const num = val ?? 0;
@@ -120,6 +122,18 @@ export function ReviewQueue({
   const vendors = useMemo(() => {
     const set = new Set(items.map((i) => i.vendor_id));
     return Array.from(set);
+  }, [items]);
+  const folderGroups = useMemo(() => {
+    const groups = new Map<string, QueueItem[]>();
+    items.forEach((item) => {
+      const key = item.ingest_batch_id || "legacy";
+      groups.set(key, [...(groups.get(key) || []), item]);
+    });
+    return Array.from(groups.entries()).map(([id, groupItems]) => ({
+      id,
+      items: groupItems,
+      label: id === "legacy" ? "Folder tanpa batch" : `Folder upload ${id.slice(0, 8)}`,
+    }));
   }, [items]);
 
   const renderStatusBadge = (status: ReconciliationStatus) => {
@@ -349,7 +363,29 @@ export function ReviewQueue({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {items.map((item) => {
+                  {folderGroups.map((folder) => (
+                    <React.Fragment key={folder.id}>
+                      <tr
+                        className="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100"
+                        onClick={() => setExpandedFolders((previous) => {
+                          const next = new Set(previous);
+                          if (next.has(folder.id)) next.delete(folder.id);
+                          else next.add(folder.id);
+                          return next;
+                        })}
+                      >
+                        <td colSpan={9} className="py-2.5 px-4">
+                          <div className="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+                            <Folder className="h-4 w-4 text-amber-500" />
+                            <span>{folder.label}</span>
+                            <span className="font-normal text-slate-400">({folder.items.length} file)</span>
+                            <span className="ml-auto text-slate-400">
+                              {expandedFolders.has(folder.id) ? "Tutup" : "Buka"}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedFolders.has(folder.id) && folder.items.map((item) => {
                     const isSelected = selectedEventId === item.event_id;
                     const computedVariance = (item.billed_amount && item.expected_amount)
                       ? (item.billed_amount - item.expected_amount)
@@ -458,7 +494,9 @@ export function ReviewQueue({
                         </td>
                       </tr>
                     );
-                  })}
+                      })}
+                    </React.Fragment>
+                  ))}
                 </tbody>
               </table>
             </div>

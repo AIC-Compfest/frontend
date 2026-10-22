@@ -56,6 +56,25 @@ export interface AuditLogItem {
   created_at: string;
 }
 
+export interface DocumentProfile {
+  document: {
+    id: string;
+    filename: string;
+    file_size: number;
+    mime_type: string;
+    status: string;
+    page_count?: number;
+    classification?: string;
+    created_at: string;
+  };
+  pages: Array<{ id: string; page_number: number; width: number; height: number; ocr_confidence: number; ocr_engine_used?: string }>;
+  segments: Array<{ id: string; segment_number: number; document_type: string; extraction_status: string; requires_human_review?: boolean }>;
+  pipeline?: { id?: string; status?: string; pipeline_version?: string; started_at?: string; completed_at?: string };
+  evidence: Array<{ id: string; field_name: string; field_value: string; confidence: number; page_number: number; bbox_x1?: number; bbox_y1?: number; bbox_x2?: number; bbox_y2?: number }>;
+  predictions: Array<{ id: string; field_name: string; prediction_status: string; predicted_value: unknown; predicted_raw_text?: string; score?: number; evidence_page?: number }>;
+  decisions: Array<{ id: string; prediction_id: string; decision_status: string; final_value: unknown; final_raw_text?: string }>;
+}
+
 /**
  * Generic authenticated API request wrapper
  */
@@ -190,4 +209,24 @@ export async function getDisputePackage(
 export async function getAuditLogs(entityId?: string): Promise<{ data: AuditLogItem[]; total: number }> {
   const qs = entityId ? `?entity_id=${encodeURIComponent(entityId)}` : "";
   return fetchAPI<{ data: AuditLogItem[]; total: number }>(`/api/v1/audit${qs}`);
+}
+
+export async function getDocumentProfile(documentId: string): Promise<DocumentProfile> {
+  return fetchAPI<DocumentProfile>(`/api/v1/documents/${documentId}/profile`);
+}
+
+export async function reviewDocumentField(
+  documentId: string,
+  payload: {
+    prediction_id: string;
+    action: "ACCEPT_PREDICTION" | "CORRECT_VALUE" | "MARK_UNKNOWN" | "REJECT";
+    reviewed_value?: unknown;
+    reason?: string;
+    reviewer_external_id?: string;
+  }
+): Promise<DocumentProfile> {
+  return fetchAPI<DocumentProfile>(`/api/v1/documents/${documentId}/reviews`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

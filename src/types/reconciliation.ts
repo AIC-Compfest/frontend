@@ -259,6 +259,7 @@ export interface QueueItem {
   dispute_deadline: string;
   days_remaining_to_dispute: number;
   is_urgent: boolean;
+  ingest_batch_id?: string;
 }
 
 export interface QueueSummary {
@@ -298,4 +299,3 @@ export interface QueueResponse {
   page_size?: number;
   total_pages?: number;
 }
-

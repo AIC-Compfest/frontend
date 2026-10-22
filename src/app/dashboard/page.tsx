@@ -20,6 +20,7 @@ import { SettingsView } from "./components/SettingsView";
 import { FinalApprovalView } from "./components/FinalApprovalView";
 import { ExceptionView } from "./components/ExceptionView";
 import { GlobalAuditLedgerView } from "./components/GlobalAuditLedgerView";
+import { DocumentProfileView } from "./components/DocumentProfileView";
 
 import { RotateCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ function DashboardContent() {
   const roleParam = searchParams.get("role") || "AP_MANAGER";
 
   const [currentTab, setCurrentTab] = useState<DashboardTab>("OVERVIEW");
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [queueSummary, setQueueSummary] = useState<QueueSummary>({
     total_invoiced_amount: 0,
     total_variance_amount: 0,
@@ -136,7 +138,6 @@ function DashboardContent() {
         queueCount={queueSummary.total_invoices_count}
         exceptionCount={queueSummary.open_exceptions_count}
         userRole={roleParam}
-        hasSelectedEvent={selectedEventId !== null}
       />
 
       {/* 2. Main Content Right Panel */}
@@ -150,7 +151,7 @@ function DashboardContent() {
               {currentTab === "EXCEPTIONS" && "Arsip Dokumen Anomali & Ditolak"}
               {currentTab === "WORKSPACE" && "Dual-Pane Evidence Workspace"}
               {currentTab === "FINAL_APPROVAL" && "Executive Final Approval (SoD)"}
-              {currentTab === "UPLOAD" && "Document Ingest Dropzone"}
+              {currentTab === "UPLOAD" && (selectedDocumentId ? "Document Profile & HITL Audit" : "Document Ingest Dropzone")}
               {currentTab === "CONTRACTS" && "Mitra Logistik (3PL)"}
               {currentTab === "DISPUTES" && "Official 3PL Dispute Packages"}
               {currentTab === "AUDIT" && "Immutable Audit Trail Ledger"}
@@ -274,7 +275,16 @@ function DashboardContent() {
           )}
 
           {/* TAB 5: UPLOAD - Document Ingest */}
-          {currentTab === "UPLOAD" && <UploadDropzone />}
+          {currentTab === "UPLOAD" && (
+            selectedDocumentId ? (
+              <DocumentProfileView
+                documentId={selectedDocumentId}
+                onBack={() => setSelectedDocumentId(null)}
+              />
+            ) : (
+              <UploadDropzone onOpenProfile={setSelectedDocumentId} />
+            )
+          )}
 
           {/* TAB 6: MITRA LOGISTIK - Master vendor & PKS matrix */}
           {currentTab === "CONTRACTS" && <MitraLogistikView />}
