@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { QueueSummary, ShipmentEvent, QueueItem } from "@/types/reconciliation";
-import { queueItemToShipmentEvent } from "@/lib/reconciliationAdapter";
 import { ReviewQueue } from "@/components/ReviewQueue";
 import { EvidenceViewer } from "@/components/EvidenceViewer";
 import { ReconciliationCard } from "@/components/ReconciliationCard";
@@ -26,12 +25,17 @@ import { RotateCw, ShieldCheck, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { API_V1 } from "@/lib/config";
+import { getStoredUser } from "@/lib/auth";
 
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = API_V1;
 
 function DashboardContent() {
   const searchParams = useSearchParams();
-  const roleParam = searchParams.get("role") || "AP_MANAGER";
+  const roleParam = searchParams.get("role");
+  const eventParam = searchParams.get("event");
+  const currentUser = getStoredUser();
+  const userRole = currentUser?.role || roleParam || "UNAUTHENTICATED";
 
   const [currentTab, setCurrentTab] = useState<DashboardTab>("OVERVIEW");
   const [queueSummary, setQueueSummary] = useState<QueueSummary>({
@@ -66,9 +70,6 @@ function DashboardContent() {
       if (data.summary) {
         setQueueSummary(data.summary);
       }
-      if (data.items && data.items.length > 0) {
-        setBatchTransactions((prev) => (prev.length === 0 ? data.items : prev));
-      }
     } catch (err) {
       console.error("Summary fetch error:", err);
     }
@@ -98,22 +99,20 @@ function DashboardContent() {
     setSelectedEventId(eventId);
     setSelectedField(null);
     setActiveDocTab("INVOICE");
+    if (allBatchItems?.length) setBatchTransactions(allBatchItems);
 
-    if (allBatchItems && allBatchItems.length > 0) {
-      setBatchTransactions(allBatchItems);
-    }
-
-    const itemsPool = (allBatchItems && allBatchItems.length > 0) ? allBatchItems : batchTransactions;
-    const targetItem = itemsPool.find((i) => i.event_id === eventId);
-    if (targetItem) {
-      setCurrentEvent(queueItemToShipmentEvent(targetItem));
-      setIsLoadingEvent(false);
-    } else {
-      fetchEventDetail(eventId);
-    }
+    // The review queue deliberately contains only a summary projection.  Always
+    // load the canonical event so the evidence workspace never invents values.
+    fetchEventDetail(eventId);
 
     setCurrentTab("WORKSPACE");
   };
+
+  useEffect(() => {
+    if (eventParam) handleSelectTransaction(eventParam);
+  // The deep-link is consumed only when its URL parameter changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventParam]);
 
   // Handle "View Proof" from Discrepancy Card
   const handleViewProof = (fieldName: string, docTab: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT") => {
@@ -131,7 +130,7 @@ function DashboardContent() {
       body: JSON.stringify({
         action,
         reviewer_role: role,
-        reviewer_id: "USER-AP-001",
+        reviewer_id: currentUser?.id,
         reason,
       }),
     });
@@ -154,7 +153,7 @@ function DashboardContent() {
         onTabChange={(tab) => setCurrentTab(tab)}
         queueCount={queueSummary.total_invoices_count}
         exceptionCount={queueSummary.open_exceptions_count}
-        userRole={roleParam}
+        userRole={userRole}
       />
 
       {/* 2. Main Content Right Panel */}
@@ -191,7 +190,7 @@ function DashboardContent() {
             </Button>
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#EDF4FA] border border-[#8FB8D6]/40 text-xs font-bold text-[#243A5E]">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>{roleParam}</span>
+              <span>{userRole}</span>
             </div>
           </div>
         </header>

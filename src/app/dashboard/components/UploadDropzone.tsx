@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { API_V1 } from "@/lib/config";
 import {
   UploadCloud,
   FileText,
@@ -26,7 +27,7 @@ import { BatchHitlReviewModal } from "./BatchHitlReviewModal";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_SIZE_MB = 10;
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = API_V1;
 
 interface QueuedFile {
   id: string;
@@ -227,12 +228,7 @@ export function UploadDropzone() {
   const handleBatchUpload = async () => {
     const readyItems = fileQueue.filter((i) => i.status === "READY");
     if (readyItems.length === 0) {
-      setGlobalError("Pilih minimal 2 dokumen sebelum diunggah agar mapping antar dokumen dapat diaudit.");
-      return;
-    }
-
-    if (readyItems.length < 2) {
-      setGlobalError("Batch audit HITL membutuhkan minimal 2 dokumen. Tambahkan satu dokumen lagi.");
+      setGlobalError("Pilih minimal satu dokumen untuk memulai ekstraksi AI dan audit mapping.");
       return;
     }
 
@@ -259,7 +255,9 @@ export function UploadDropzone() {
     setIsBatchUploading(false);
     // Refresh the live documents table
     fetchRecentDocs();
-    if (reviewedIDs.length >= 2) setReviewDocumentIds([...new Set(reviewedIDs)]);
+    // Every successful upload immediately opens the field-level review. A
+    // single document is a valid unit of AI extraction and human approval.
+    if (reviewedIDs.length > 0) setReviewDocumentIds([...new Set(reviewedIDs)]);
   };
 
   const readyItemsCount = fileQueue.filter((i) => i.status === "READY").length;
@@ -652,7 +650,10 @@ export function UploadDropzone() {
           )}
         </CardContent>
       </Card>
-      {reviewDocumentIds && <BatchHitlReviewModal documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} />}
+      {reviewDocumentIds && <BatchHitlReviewModal documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} onFinalized={(eventId) => {
+        setReviewDocumentIds(null);
+        window.location.assign(`/dashboard?event=${encodeURIComponent(eventId)}`);
+      }} />}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { API_V1 } from "@/lib/config";
 import {
   Calendar,
   RotateCw,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import { getContracts, ContractItem } from "@/lib/api";
 
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = API_V1;
 
 interface VendorItem {
   vendor_id: string;

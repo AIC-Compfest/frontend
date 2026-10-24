@@ -4,10 +4,10 @@
  */
 
 import { getStoredToken } from "./auth";
-import { QueueResponse, QueueItem, QueueSummary, DisputePackage } from "@/types/reconciliation";
+import { requireApiOrigin } from "./config";
+import { QueueResponse, QueueItem, QueueSummary, DisputePackage, ShipmentEvent } from "@/types/reconciliation";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const apiBaseURL = () => requireApiOrigin();
 
 export interface HealthResponse {
   status: string;
@@ -82,7 +82,7 @@ export async function fetchAPI<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = `${apiBaseURL()}${path.startsWith("/") ? path : `/${path}`}`;
   
   const token = getStoredToken();
   const headers: Record<string, string> = {
@@ -115,7 +115,7 @@ export async function fetchAPI<T>(
  */
 export async function checkBackendHealth() {
   try {
-    const res = await fetch(`${API_BASE_URL}/healthz`, {
+    const res = await fetch(`${apiBaseURL()}/healthz`, {
       method: "GET",
       cache: "no-store",
     });
@@ -229,4 +229,15 @@ export async function reviewDocumentField(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/** Runs deterministic reconciliation after every mapping in an upload batch is approved. */
+export async function finalizeDocumentBatch(batchId: string): Promise<ShipmentEvent> {
+  return fetchAPI<ShipmentEvent>(`/api/v1/documents/batches/${encodeURIComponent(batchId)}/finalize`, {
+    method: "POST",
+  });
+}
+
+export async function reprocessDocument(documentId: string): Promise<void> {
+  await fetchAPI(`/api/v1/documents/${encodeURIComponent(documentId)}/reprocess`, { method: "POST" });
 }

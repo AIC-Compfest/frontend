@@ -7,10 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
-  Sparkles,
   ArrowLeft,
   AlertCircle,
 } from "lucide-react";
@@ -19,8 +17,8 @@ import VeriflowLogo from "@/components/logo/VeriflowLogo";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("ap.manager@enterprise.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -34,23 +32,6 @@ export default function LoginPage() {
     } catch (err: unknown) {
       setErrorMessage(
         err instanceof Error ? err.message : "Email atau password salah."
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleQuickDemo = async (role: string, demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword("password123");
-    setErrorMessage(null);
-    setSubmitting(true);
-    try {
-      await loginUser(demoEmail, "password123");
-      router.push(`/dashboard?role=${role}`);
-    } catch (err: unknown) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "Gagal login dengan akun demo."
       );
     } finally {
       setSubmitting(false);
@@ -106,37 +87,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Demo Quick Access Badges */}
-              <div className="p-2.5 rounded-xl bg-[#EDF4FA] border border-[#8FB8D6]/40 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-[#243A5E] uppercase tracking-wider flex items-center gap-1">
-                    <Sparkles className="h-3 w-3 text-[#5F86A6]" />
-                    Demo 1-Click Access:
-                  </span>
-                  <Badge variant="brand" className="text-[9px] px-1 py-0">
-                    QUICK ACCESS
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo("AP_MANAGER", "ap.manager@enterprise.com")}
-                    className="p-1.5 rounded-md bg-white border border-[#8FB8D6]/60 text-left hover:border-[#243A5E] transition-all cursor-pointer text-[11px]"
-                  >
-                    <span className="font-bold text-[#243A5E] block leading-tight">AP Manager</span>
-                    <span className="text-[9px] text-slate-400 block">Finance Reviewer</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo("FINANCE_CONTROLLER", "controller@enterprise.com")}
-                    className="p-1.5 rounded-md bg-white border border-[#8FB8D6]/60 text-left hover:border-[#243A5E] transition-all cursor-pointer text-[11px]"
-                  >
-                    <span className="font-bold text-[#243A5E] block leading-tight">Controller</span>
-                    <span className="text-[9px] text-slate-400 block">Finance Lead</span>
-                  </button>
-                </div>
-              </div>
-
               <form onSubmit={handleSubmit} className="grid gap-3.5">
                 <div className="grid gap-1.5">
                   <Label htmlFor="email">Email</Label>
@@ -151,12 +101,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="grid gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <span className="text-[10px] text-slate-400">
-                      Default: <code className="font-mono text-[#243A5E]">password123</code>
-                    </span>
-                  </div>
+                  <Label htmlFor="password">Password</Label>
                   <Input
                     id="password"
                     type="password"

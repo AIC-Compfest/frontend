@@ -242,29 +242,31 @@ export function ReconciliationCard({
             <div className="p-3.5 bg-slate-950 text-slate-300 font-mono text-[11px] space-y-1.5 leading-relaxed overflow-x-auto">
               {(() => {
                 const trace = event?.pricing?.trace;
-                const baseRate = (trace && trace.base_rate_unit > 0) ? trace.base_rate_unit : (event?.contract?.base_rate || 3500);
-                const weight = (trace && trace.weight_used_kg > 0) ? trace.weight_used_kg : (event?.invoice?.weight_billed_kg || event?.shipment?.weight_actual_kg || 1250);
-                const baseAmt = (trace && trace.base_amount > 0) ? trace.base_amount : (event?.pricing?.expected_base_charge || Math.round(billed * 0.85));
+                const baseRate = trace?.base_rate_unit ?? event?.contract?.base_rate;
+                const weight = trace?.weight_used_kg ?? event?.invoice?.weight_billed_kg ?? event?.shipment?.weight_actual_kg;
+                const baseAmt = trace?.base_amount ?? event?.pricing?.expected_base_charge;
 
-                const fuelPct = (trace && trace.fuel_percent > 0) ? trace.fuel_percent : (event?.contract?.applicable_fuel_surcharge_percent || 5);
-                const fuelAmt = (trace && trace.fuel_amount > 0) ? trace.fuel_amount : (event?.pricing?.expected_fuel_surcharge || Math.round(baseAmt * (fuelPct / 100)));
-                const preTax = (trace && trace.pre_tax_amount > 0) ? trace.pre_tax_amount : (baseAmt + fuelAmt);
-                const taxPct = (trace && trace.tax_rate_percent > 0) ? trace.tax_rate_percent : 11;
-                const taxAmt = (trace && trace.tax_amount > 0) ? trace.tax_amount : (event?.pricing?.expected_tax || Math.round(preTax * (taxPct / 100)));
-                const expTotal = (trace && trace.expected_total > 0) ? trace.expected_total : (event?.pricing?.expected_total_charge || expected);
-                const billTotal = (trace && trace.billed_total > 0) ? trace.billed_total : billed;
-                const tier = trace?.weight_tier || "Standard Tier";
+                const fuelPct = trace?.fuel_percent ?? event?.contract?.applicable_fuel_surcharge_percent;
+                const fuelAmt = trace?.fuel_amount ?? event?.pricing?.expected_fuel_surcharge;
+                const preTax = trace?.pre_tax_amount;
+                const taxPct = trace?.tax_rate_percent;
+                const taxAmt = trace?.tax_amount ?? event?.pricing?.expected_tax;
+                const expTotal = trace?.expected_total ?? event?.pricing?.expected_total_charge;
+                const billTotal = trace?.billed_total ?? event?.invoice?.billed_amount;
+                const tier = trace?.weight_tier ?? "Tidak tersedia";
+                const idr = (amount: number | undefined) => amount === undefined ? "Tidak tersedia" : amount.toLocaleString("id-ID");
+                const value = (amount: number | undefined, suffix = "") => amount === undefined ? "Tidak tersedia" : `${amount}${suffix}`;
 
                 return (
                   <>
                     <div className="text-[#8FB8D6] font-bold">--- INTEGER IDR MATHEMATICAL AUDIT TRACE ---</div>
-                    <div>Base Rate Tariff : Rp {baseRate.toLocaleString("id-ID")} ({tier})</div>
-                    <div>Weight Used Scale: {weight} kg ➔ Base: Rp {baseAmt.toLocaleString("id-ID")}</div>
-                    <div>Fuel Surcharge   : {fuelPct}% ➔ Rp {fuelAmt.toLocaleString("id-ID")}</div>
-                    <div>Pre-Tax Subtotal : Rp {preTax.toLocaleString("id-ID")}</div>
-                    <div>PPN Tax ({taxPct}%)   : Rp {taxAmt.toLocaleString("id-ID")}</div>
+                    <div>Base Rate Tariff : Rp {idr(baseRate)} ({tier})</div>
+                    <div>Weight Used Scale: {value(weight, " kg")} ➔ Base: Rp {idr(baseAmt)}</div>
+                    <div>Fuel Surcharge   : {value(fuelPct, "%")} ➔ Rp {idr(fuelAmt)}</div>
+                    <div>Pre-Tax Subtotal : Rp {idr(preTax)}</div>
+                    <div>PPN Tax ({value(taxPct, "%")})   : Rp {idr(taxAmt)}</div>
                     <div className="text-emerald-400 font-bold border-t border-slate-700 pt-1">
-                      Expected Total   : Rp {expTotal.toLocaleString("id-ID")} | Billed: Rp {billTotal.toLocaleString("id-ID")}
+                      Expected Total   : Rp {idr(expTotal)} | Billed: Rp {idr(billTotal)}
                     </div>
                   </>
                 );
@@ -277,7 +279,7 @@ export function ReconciliationCard({
       {/* Human-in-the-Loop Decision Buttons */}
       <CardFooter className="p-3.5 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-3">
         <div className="text-[11px] text-slate-500 font-medium">
-          Authorizer Role: <strong className="text-slate-800 font-bold">AP_MANAGER</strong>
+          Authorizer Role: <strong className="text-slate-800 font-bold">Mengikuti sesi pengguna</strong>
         </div>
 
         <div className="flex items-center gap-2">

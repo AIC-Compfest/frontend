@@ -423,8 +423,8 @@ export function EvidenceViewer({
                     <ShieldAlert className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
                     <div>
                       <strong className="font-bold block">Peringatan Integritas Duplikasi Faktur:</strong>
-                      Nomor shipment yang sama ({event.shipment_id}) telah ditagih sebelumnya pada invoice terdahulu
-                      (INV-DUMMY-2026-001). Tagihan ini terdeteksi sebagai penagihan ganda (double billing).
+                      Nomor shipment yang sama ({event.shipment_id}) telah terdeteksi pada dokumen invoice lain.
+                      Buka jejak audit untuk memverifikasi nomor invoice sumber sebelum mengambil keputusan.
                     </div>
                   </div>
                 )}

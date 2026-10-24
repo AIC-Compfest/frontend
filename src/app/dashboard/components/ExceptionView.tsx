@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { RotateCw, AlertOctagon, Inbox, ArrowRight, ShieldAlert, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { API_V1 } from "@/lib/config";
 
 interface ExceptionViewProps {
   onSelectTransaction: (eventId: string) => void;
 }
 
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = API_V1;
 
 export function ExceptionView({ onSelectTransaction }: ExceptionViewProps) {
   const [items, setItems] = useState<QueueItem[]>([]);

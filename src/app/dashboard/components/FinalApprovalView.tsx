@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { QueueItem } from "@/types/reconciliation";
+import { API_V1 } from "@/lib/config";
+import { getStoredUser } from "@/lib/auth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +29,7 @@ interface FinalApprovalViewProps {
   onNavigateToAudit?: () => void;
 }
 
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = API_V1;
 
 export function FinalApprovalView({
   onSelectTransaction,
@@ -121,7 +123,7 @@ export function FinalApprovalView({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "APPROVE",
-            reviewer_id: "FINANCE_CONTROLLER_001",
+            reviewer_id: getStoredUser()?.id,
             role: "FINANCE_CONTROLLER",
             reason: notes || "Final SoD Payment Release Authorized by Finance Controller",
           }),
