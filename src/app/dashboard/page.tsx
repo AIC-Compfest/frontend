@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { QueueSummary, ShipmentEvent } from "@/types/reconciliation";
+import { QueueSummary, ShipmentEvent, QueueItem } from "@/types/reconciliation";
+import { queueItemToShipmentEvent } from "@/lib/reconciliationAdapter";
 import { ReviewQueue } from "@/components/ReviewQueue";
 import { EvidenceViewer } from "@/components/EvidenceViewer";
 import { ReconciliationCard } from "@/components/ReconciliationCard";
@@ -20,11 +21,11 @@ import { SettingsView } from "./components/SettingsView";
 import { FinalApprovalView } from "./components/FinalApprovalView";
 import { ExceptionView } from "./components/ExceptionView";
 import { GlobalAuditLedgerView } from "./components/GlobalAuditLedgerView";
-import { DocumentProfileView } from "./components/DocumentProfileView";
 
-import { RotateCw, ShieldCheck } from "lucide-react";
+import { RotateCw, ShieldCheck, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const API_BASE = "http://localhost:8080/api/v1";
 
@@ -33,7 +34,6 @@ function DashboardContent() {
   const roleParam = searchParams.get("role") || "AP_MANAGER";
 
   const [currentTab, setCurrentTab] = useState<DashboardTab>("OVERVIEW");
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [queueSummary, setQueueSummary] = useState<QueueSummary>({
     total_invoiced_amount: 0,
     total_variance_amount: 0,
@@ -45,6 +45,7 @@ function DashboardContent() {
 
   // Selected Transaction & Workspace State
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [batchTransactions, setBatchTransactions] = useState<QueueItem[]>([]);
   const [currentEvent, setCurrentEvent] = useState<ShipmentEvent | null>(null);
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
 
@@ -56,14 +57,17 @@ function DashboardContent() {
   const [decisionModalAction, setDecisionModalAction] = useState<"APPROVE" | "DISPUTE" | "REJECT" | null>(null);
   const [isDisputePackageOpen, setIsDisputePackageOpen] = useState(false);
 
-  // Fetch KPI Summary from Backend API
+  // Fetch KPI Summary from Supabase Review Queue API
   const fetchSummary = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/reconcile/queue?page_size=1`);
+      const res = await fetch("/api/review-queue");
       if (!res.ok) throw new Error("Gagal mengambil ringkasan KPI");
       const data = await res.json();
       if (data.summary) {
         setQueueSummary(data.summary);
+      }
+      if (data.items && data.items.length > 0) {
+        setBatchTransactions((prev) => (prev.length === 0 ? data.items : prev));
       }
     } catch (err) {
       console.error("Summary fetch error:", err);
@@ -90,11 +94,24 @@ function DashboardContent() {
   }, [fetchSummary]);
 
   // Handle Transaction Selection from Queue or Overview
-  const handleSelectTransaction = (eventId: string) => {
+  const handleSelectTransaction = (eventId: string, allBatchItems?: QueueItem[]) => {
     setSelectedEventId(eventId);
     setSelectedField(null);
     setActiveDocTab("INVOICE");
-    fetchEventDetail(eventId);
+
+    if (allBatchItems && allBatchItems.length > 0) {
+      setBatchTransactions(allBatchItems);
+    }
+
+    const itemsPool = (allBatchItems && allBatchItems.length > 0) ? allBatchItems : batchTransactions;
+    const targetItem = itemsPool.find((i) => i.event_id === eventId);
+    if (targetItem) {
+      setCurrentEvent(queueItemToShipmentEvent(targetItem));
+      setIsLoadingEvent(false);
+    } else {
+      fetchEventDetail(eventId);
+    }
+
     setCurrentTab("WORKSPACE");
   };
 
@@ -151,7 +168,7 @@ function DashboardContent() {
               {currentTab === "EXCEPTIONS" && "Arsip Dokumen Anomali & Ditolak"}
               {currentTab === "WORKSPACE" && "Dual-Pane Evidence Workspace"}
               {currentTab === "FINAL_APPROVAL" && "Executive Final Approval (SoD)"}
-              {currentTab === "UPLOAD" && (selectedDocumentId ? "Document Profile & HITL Audit" : "Document Ingest Dropzone")}
+              {currentTab === "UPLOAD" && "Document Ingest Dropzone"}
               {currentTab === "CONTRACTS" && "Mitra Logistik (3PL)"}
               {currentTab === "DISPUTES" && "Official 3PL Dispute Packages"}
               {currentTab === "AUDIT" && "Immutable Audit Trail Ledger"}
@@ -238,6 +255,59 @@ function DashboardContent() {
                 </div>
               </div>
 
+              {/* All Transactions in this Batch - Dynamic Selector */}
+              {batchTransactions.length > 0 && (
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span className="flex items-center gap-2">
+                      <Folder className="h-4 w-4 text-amber-500" />
+                      <span>Transaksi dalam Batch Ini ({batchTransactions.length} Tagihan)</span>
+                    </span>
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Pilih transaksi untuk memeriksa bukti &amp; perhitungan matematis
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {batchTransactions.map((tx) => {
+                      const isActive =
+                        (selectedEventId || currentEvent?.event_id) === tx.event_id;
+                      return (
+                        <button
+                          key={tx.event_id}
+                          type="button"
+                          onClick={() =>
+                            handleSelectTransaction(tx.event_id, batchTransactions)
+                          }
+                          className={cn(
+                            "px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border text-left",
+                            isActive
+                              ? "bg-[#243A5E] text-white border-[#243A5E] shadow-xs"
+                              : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                          )}
+                        >
+                          <span className="font-mono font-extrabold">{tx.invoice_number}</span>
+                          <span
+                            className={cn(
+                              "text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider",
+                              tx.highest_severity === "CRITICAL"
+                                ? "bg-rose-600 text-white"
+                                : tx.highest_severity === "HIGH"
+                                ? "bg-orange-500 text-white"
+                                : tx.highest_severity === "MEDIUM"
+                                ? "bg-amber-400 text-slate-900"
+                                : "bg-emerald-600 text-white"
+                            )}
+                          >
+                            {tx.highest_severity || "LOW"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {isLoadingEvent || !currentEvent ? (
                 <div className="py-20 text-center text-[#5F86A6] text-xs">
                   <div className="animate-spin w-8 h-8 border-2 border-[#243A5E] border-t-transparent rounded-full mx-auto mb-3" />
@@ -275,16 +345,7 @@ function DashboardContent() {
           )}
 
           {/* TAB 5: UPLOAD - Document Ingest */}
-          {currentTab === "UPLOAD" && (
-            selectedDocumentId ? (
-              <DocumentProfileView
-                documentId={selectedDocumentId}
-                onBack={() => setSelectedDocumentId(null)}
-              />
-            ) : (
-              <UploadDropzone onOpenProfile={setSelectedDocumentId} />
-            )
-          )}
+          {currentTab === "UPLOAD" && <UploadDropzone />}
 
           {/* TAB 6: MITRA LOGISTIK - Master vendor & PKS matrix */}
           {currentTab === "CONTRACTS" && <MitraLogistikView />}

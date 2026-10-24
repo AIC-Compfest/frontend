@@ -17,12 +17,12 @@ import {
   Plus,
   Download,
   RotateCw,
-  Eye,
   FileCheck2,
   Folder,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { BatchHitlReviewModal } from "./BatchHitlReviewModal";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_SIZE_MB = 10;
@@ -57,7 +57,7 @@ interface SavedDocItem {
   ingest_batch_id?: string;
 }
 
-export function UploadDropzone({ onOpenProfile }: { onOpenProfile?: (documentId: string) => void }) {
+export function UploadDropzone() {
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
   const [isBatchUploading, setIsBatchUploading] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -65,6 +65,7 @@ export function UploadDropzone({ onOpenProfile }: { onOpenProfile?: (documentId:
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ingestBatchIdRef = useRef(crypto.randomUUID());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [reviewDocumentIds, setReviewDocumentIds] = useState<string[] | null>(null);
 
   // Saved documents in Supabase DB state
   const [savedDocs, setSavedDocs] = useState<SavedDocItem[]>([]);
@@ -226,19 +227,29 @@ export function UploadDropzone({ onOpenProfile }: { onOpenProfile?: (documentId:
   const handleBatchUpload = async () => {
     const readyItems = fileQueue.filter((i) => i.status === "READY");
     if (readyItems.length === 0) {
-      setGlobalError("Pilih minimal 1 file sebelum diunggah.");
+      setGlobalError("Pilih minimal 2 dokumen sebelum diunggah agar mapping antar dokumen dapat diaudit.");
+      return;
+    }
+
+    if (readyItems.length < 2) {
+      setGlobalError("Batch audit HITL membutuhkan minimal 2 dokumen. Tambahkan satu dokumen lagi.");
       return;
     }
 
     setIsBatchUploading(true);
     setGlobalError(null);
 
+    const reviewedIDs: string[] = [];
     for (const item of readyItems) {
       setFileQueue((prev) =>
         prev.map((it) => (it.id === item.id ? { ...it, status: "UPLOADING" } : it))
       );
 
       const updated = await uploadSingleItem(item);
+
+      if ((updated.status === "SUCCESS" || updated.status === "DUPLICATE") && updated.result?.document_id) {
+        reviewedIDs.push(updated.result.document_id);
+      }
 
       setFileQueue((prev) =>
         prev.map((it) => (it.id === item.id ? updated : it))
@@ -248,6 +259,7 @@ export function UploadDropzone({ onOpenProfile }: { onOpenProfile?: (documentId:
     setIsBatchUploading(false);
     // Refresh the live documents table
     fetchRecentDocs();
+    if (reviewedIDs.length >= 2) setReviewDocumentIds([...new Set(reviewedIDs)]);
   };
 
   const readyItemsCount = fileQueue.filter((i) => i.status === "READY").length;
@@ -376,7 +388,7 @@ export function UploadDropzone({ onOpenProfile }: { onOpenProfile?: (documentId:
                   <Button
                     type="button"
                     onClick={handleBatchUpload}
-                    disabled={readyItemsCount === 0 || isBatchUploading}
+                    disabled={readyItemsCount < 2 || isBatchUploading}
                     className="bg-[#1B2A4A] text-white hover:bg-sky-600 font-bold text-xs h-8 px-4 gap-2 cursor-pointer"
                   >
                     {isBatchUploading ? (
@@ -387,7 +399,7 @@ export function UploadDropzone({ onOpenProfile }: { onOpenProfile?: (documentId:
                     ) : (
                       <>
                         <Sparkles className="h-3.5 w-3.5 text-sky-300" />
-                        <span>Unggah Batch ({readyItemsCount})</span>
+                        <span>Unggah & Audit Batch ({readyItemsCount})</span>
                       </>
                     )}
                   </Button>
@@ -621,16 +633,10 @@ export function UploadDropzone({ onOpenProfile }: { onOpenProfile?: (documentId:
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button type="button" onClick={() => onOpenProfile?.(doc.id)} className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-2.5 py-1 text-[11px] font-bold text-indigo-700 transition-colors hover:bg-indigo-700 hover:text-white">
-                            <Eye className="h-3 w-3" />
-                            <span>Audit HITL</span>
-                          </button>
                           <a href={`${API_BASE}/documents/${doc.id}/download`} download={doc.filename} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-sky-200 px-2.5 py-1 text-[11px] font-bold text-sky-700 transition-colors hover:bg-[#1B2A4A] hover:text-white">
                             <Download className="h-3 w-3" />
                             <span>Unduh</span>
                           </a>
-                        </div>
                         </td>
                       </tr>
                                 );
@@ -646,6 +652,7 @@ export function UploadDropzone({ onOpenProfile }: { onOpenProfile?: (documentId:
           )}
         </CardContent>
       </Card>
+      {reviewDocumentIds && <BatchHitlReviewModal documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} />}
     </div>
   );
 }
