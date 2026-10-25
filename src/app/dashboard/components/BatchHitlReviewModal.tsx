@@ -25,6 +25,11 @@ const labelFor = (profile: DocumentProfile) =>
 const isMissingPrediction = (prediction: DocumentProfile["predictions"][number]) =>
   !hasSuggestion(prediction.predicted_value, prediction.predicted_raw_text);
 
+const hasMalformedScalar = (profile: DocumentProfile) => profile.predictions.some((prediction) =>
+  prediction.registry_visible !== false && typeof prediction.predicted_value === "string" &&
+  (prediction.predicted_value.length > 160 || /[\r\n]/.test(prediction.predicted_value))
+);
+
 export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Props) {
   const [profiles, setProfiles] = useState<DocumentProfile[]>([]);
   const [activeId, setActiveId] = useState("");
@@ -60,7 +65,7 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
       .sort((a, b) => order.get(a.field_name)! - order.get(b.field_name)!);
   };
   const allApproved = useMemo(
-    () => profiles.length > 0 && profiles.every((profile) => profile.predictions.length > 0 && pending(profile).length === 0),
+    () => profiles.length > 0 && profiles.every((profile) => profile.predictions.length > 0 && pending(profile).length === 0 && !hasMalformedScalar(profile)),
     [profiles]
   );
 
@@ -152,7 +157,7 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
         </div>
         {active && <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {error && <div className="mb-3 rounded-lg bg-rose-50 p-3 text-xs text-rose-700"><AlertCircle className="mr-1 inline h-3.5 w-3.5" />{error}</div>}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-800">{active.document.filename}</p><p className="text-[11px] text-slate-500">{labelFor(active)} · {active.predictions.length} field hasil ekstraksi</p>{pending(active).some(isMissingPrediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Field yang belum ditemukan harus dikoreksi sebelum seluruh dokumen dapat disetujui.</p>}</div><Button size="sm" disabled={saving !== null || pending(active).length === 0 || pending(active).some(isMissingPrediction)} onClick={() => approveDocument(active)} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle2 />Setujui semua field tab ini</Button></div>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-800">{active.document.filename}</p><p className="text-[11px] text-slate-500">{labelFor(active)} · {active.predictions.length} field hasil ekstraksi</p>{hasMalformedScalar(active) && <p className="mt-1 text-[11px] font-medium text-amber-700">Mapping lama berisi nilai scalar yang tidak valid. Jalankan ulang AI sebelum menyetujui dokumen.</p>}{pending(active).some(isMissingPrediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Field yang belum ditemukan harus dikoreksi sebelum seluruh dokumen dapat disetujui.</p>}</div><div className="flex gap-2">{hasMalformedScalar(active) && <Button size="sm" variant="outline" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button>}<Button size="sm" disabled={saving !== null || pending(active).length === 0 || pending(active).some(isMissingPrediction)} onClick={() => approveDocument(active)} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle2 />Setujui semua field tab ini</Button></div></div>
           {visiblePredictions(active).length === 0 ? <div className="flex items-center justify-between gap-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800"><span>Belum ada mapping tersimpan. Jalankan ekstraksi ulang pada dokumen asli untuk membuat field dan confidence.</span><Button size="sm" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button></div> : <div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full min-w-[620px] text-left text-xs"><thead className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Field</th><th className="px-4 py-3">Nilai hasil mapping</th><th className="px-4 py-3">Confidence</th><th className="px-4 py-3 text-right">Aksi audit</th></tr></thead><tbody className="divide-y divide-slate-100">{visiblePredictions(active).map((prediction) => {
             const decision = decisionFor(active, prediction.id); const isPending = decision?.decision_status === "PENDING_REVIEW"; const busy = saving === prediction.id;
             const confidence = typeof prediction.score === "number" ? `${(prediction.score * 100).toFixed(1)}%` : "—";
