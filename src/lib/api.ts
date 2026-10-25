@@ -65,13 +65,21 @@ export interface DocumentProfile {
     status: string;
     page_count?: number;
     classification?: string;
+    ingest_batch_id?: string;
+    status_approval?: string;
+    error_message?: string;
     created_at: string;
   };
   pages: Array<{ id: string; page_number: number; width: number; height: number; ocr_confidence: number; ocr_engine_used?: string }>;
   segments: Array<{ id: string; segment_number: number; document_type: string; extraction_status: string; requires_human_review?: boolean }>;
   pipeline?: { id?: string; status?: string; pipeline_version?: string; started_at?: string; completed_at?: string };
   evidence: Array<{ id: string; field_name: string; field_value: string; confidence: number; page_number: number; bbox_x1?: number; bbox_y1?: number; bbox_x2?: number; bbox_y2?: number }>;
-  predictions: Array<{ id: string; field_name: string; prediction_status: string; predicted_value: unknown; predicted_raw_text?: string; score?: number; evidence_page?: number }>;
+  predictions: Array<{
+    id: string; field_name: string; prediction_status: string; predicted_value: unknown; predicted_raw_text?: string;
+    score?: number; evidence_page?: number; review_status?: "ACCEPTED" | "REVIEW" | "UNKNOWN";
+    low_confidence?: boolean; source_kind?: "ml" | "rule" | "table"; registry_visible?: boolean;
+    document_type?: string; alternatives?: unknown[]; decoder_metadata?: Record<string, unknown>;
+  }>;
   decisions: Array<{ id: string; prediction_id: string; decision_status: string; final_value: unknown; final_raw_text?: string }>;
 }
 
