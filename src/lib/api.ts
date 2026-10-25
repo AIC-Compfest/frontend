@@ -4,10 +4,10 @@
  */
 
 import { getStoredToken } from "./auth";
-import { QueueResponse, QueueItem, QueueSummary, DisputePackage } from "@/types/reconciliation";
+import { requireApiOrigin } from "./config";
+import { QueueResponse, QueueItem, QueueSummary, DisputePackage, ShipmentEvent } from "@/types/reconciliation";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const apiBaseURL = () => requireApiOrigin();
 
 export interface HealthResponse {
   status: string;
@@ -56,6 +56,33 @@ export interface AuditLogItem {
   created_at: string;
 }
 
+export interface DocumentProfile {
+  document: {
+    id: string;
+    filename: string;
+    file_size: number;
+    mime_type: string;
+    status: string;
+    page_count?: number;
+    classification?: string;
+    ingest_batch_id?: string;
+    status_approval?: string;
+    error_message?: string;
+    created_at: string;
+  };
+  pages: Array<{ id: string; page_number: number; width: number; height: number; ocr_confidence: number; ocr_engine_used?: string }>;
+  segments: Array<{ id: string; segment_number: number; document_type: string; extraction_status: string; requires_human_review?: boolean }>;
+  pipeline?: { id?: string; status?: string; pipeline_version?: string; started_at?: string; completed_at?: string };
+  evidence: Array<{ id: string; field_name: string; field_value: string; confidence: number; page_number: number; bbox_x1?: number; bbox_y1?: number; bbox_x2?: number; bbox_y2?: number }>;
+  predictions: Array<{
+    id: string; field_name: string; prediction_status: string; predicted_value: unknown; predicted_raw_text?: string;
+    score?: number; evidence_page?: number; review_status?: "ACCEPTED" | "REVIEW" | "UNKNOWN";
+    low_confidence?: boolean; source_kind?: "ml" | "rule" | "table"; registry_visible?: boolean;
+    document_type?: string; alternatives?: unknown[]; decoder_metadata?: Record<string, unknown>;
+  }>;
+  decisions: Array<{ id: string; prediction_id: string; decision_status: string; final_value: unknown; final_raw_text?: string }>;
+}
+
 /**
  * Generic authenticated API request wrapper
  */
@@ -63,7 +90,7 @@ export async function fetchAPI<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = `${apiBaseURL()}${path.startsWith("/") ? path : `/${path}`}`;
   
   const token = getStoredToken();
   const headers: Record<string, string> = {
@@ -96,7 +123,7 @@ export async function fetchAPI<T>(
  */
 export async function checkBackendHealth() {
   try {
-    const res = await fetch(`${API_BASE_URL}/healthz`, {
+    const res = await fetch(`${apiBaseURL()}/healthz`, {
       method: "GET",
       cache: "no-store",
     });
@@ -190,4 +217,35 @@ export async function getDisputePackage(
 export async function getAuditLogs(entityId?: string): Promise<{ data: AuditLogItem[]; total: number }> {
   const qs = entityId ? `?entity_id=${encodeURIComponent(entityId)}` : "";
   return fetchAPI<{ data: AuditLogItem[]; total: number }>(`/api/v1/audit${qs}`);
+}
+
+export async function getDocumentProfile(documentId: string): Promise<DocumentProfile> {
+  return fetchAPI<DocumentProfile>(`/api/v1/documents/${documentId}/profile`);
+}
+
+export async function reviewDocumentField(
+  documentId: string,
+  payload: {
+    prediction_id: string;
+    action: "ACCEPT_PREDICTION" | "CORRECT_VALUE" | "MARK_UNKNOWN" | "REJECT";
+    reviewed_value?: unknown;
+    reason?: string;
+    reviewer_external_id?: string;
+  }
+): Promise<DocumentProfile> {
+  return fetchAPI<DocumentProfile>(`/api/v1/documents/${documentId}/reviews`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Runs deterministic reconciliation after every mapping in an upload batch is approved. */
+export async function finalizeDocumentBatch(batchId: string): Promise<ShipmentEvent> {
+  return fetchAPI<ShipmentEvent>(`/api/v1/documents/batches/${encodeURIComponent(batchId)}/finalize`, {
+    method: "POST",
+  });
+}
+
+export async function reprocessDocument(documentId: string): Promise<void> {
+  await fetchAPI(`/api/v1/documents/${encodeURIComponent(documentId)}/reprocess`, { method: "POST" });
 }

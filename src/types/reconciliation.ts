@@ -239,6 +239,16 @@ export interface ShipmentEvent {
   audit_trail: AuditTrailItem[];
 }
 
+export interface QueueDiscrepancy {
+  id: string;
+  code: string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | string;
+  description: string;
+  expected_value?: unknown;
+  observed_value?: unknown;
+  variance_amount?: number;
+}
+
 export interface QueueItem {
   event_id: string;
   transaction_id: string;
@@ -246,9 +256,10 @@ export interface QueueItem {
   vendor_id: string;
   vendor_name: string;
   shipment_id: string;
-  awb_number: string;
+  awb_number?: string;
   status: ReconciliationStatus;
   primary_discrepancy?: string;
+  primary_discrepancy_code?: string;
   top_discrepancy?: string;
   discrepancy_count: number;
   billed_amount: number;
@@ -256,9 +267,21 @@ export interface QueueItem {
   variance_amount: number;
   priority_score: number;
   priority_level: "HIGH" | "MEDIUM" | "LOW";
-  dispute_deadline: string;
-  days_remaining_to_dispute: number;
+  highest_severity?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | string;
+  discrepancies?: QueueDiscrepancy[];
+  case_id?: string;
+  case_number?: string;
+  case_status?: string;
+  dispute_deadline?: string;
+  days_remaining_to_dispute?: number;
   is_urgent: boolean;
+  ingest_batch_id?: string;
+  origin?: string;
+  destination?: string;
+  shipment_date?: string;
+  agreement_number?: string;
+  calculation_trace?: any;
+  created_at?: string;
 }
 
 export interface QueueSummary {
@@ -298,4 +321,3 @@ export interface QueueResponse {
   page_size?: number;
   total_pages?: number;
 }
-

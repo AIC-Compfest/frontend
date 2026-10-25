@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { QueueItem, QueueSummary, ReconciliationStatus } from "@/types/reconciliation";
+import { QueueItem, QueueSummary } from "@/types/reconciliation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,27 +16,19 @@ import {
   Clock,
   TrendingDown,
   DollarSign,
-  ThumbsUp,
-  FileCheck2,
-  XCircle,
-  Sparkles,
+  Folder,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ReviewQueueProps {
-  selectedEventId: string | null;
-  onSelectTransaction: (eventId: string) => void;
+  selectedEventId?: string | null;
+  onSelectTransaction: (eventId: string, allBatchItems?: QueueItem[]) => void;
   onRefresh?: () => void;
   onNavigateToFinalApproval?: () => void;
 }
 
-const API_BASE = "http://localhost:8080/api/v1";
-
-// Anomali statuses that belong in Review Queue
-const ANOMALI_STATUSES = "EXCEPTION,DUPLICATE,INSUFFICIENT_EVIDENCE";
-
 export function ReviewQueue({
-  selectedEventId,
   onSelectTransaction,
   onRefresh,
   onNavigateToFinalApproval,
@@ -50,7 +42,8 @@ export function ReviewQueue({
     urgent_disputes_count: 0,
     matches_count: 0,
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   // Default: show anomali only (EXCEPTION, DUPLICATE, INSUFFICIENT_EVIDENCE)
   const [statusFilter, setStatusFilter] = useState<string>("ANOMALI");
@@ -75,42 +68,49 @@ export function ReviewQueue({
     return `Rp ${val.toLocaleString("id-ID")}`;
   };
 
-  const showToast = (msg: string, type: "success" | "error") => {
+  const showToast = useCallback((msg: string, type: "success" | "error") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
-  };
+  }, []);
 
-  // Build actual status param for API
-  const getStatusParam = () => {
-    if (statusFilter === "ANOMALI") return ANOMALI_STATUSES;
-    if (statusFilter === "ALL") return "";
-    return statusFilter;
-  };
+  const fetchQueueData = useCallback(
+    async (isManualRefresh = false) => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const params = new URLSearchParams();
+        if (statusFilter) params.set("status", statusFilter);
+        if (severityFilter !== "ALL") params.set("severity", severityFilter);
+        if (vendorFilter !== "ALL") params.set("vendor", vendorFilter);
+        if (search.trim() !== "") params.set("search", search.trim());
 
-  const fetchQueueData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      const statusParam = getStatusParam();
-      if (statusParam) params.set("status", statusParam);
-      if (severityFilter !== "ALL") params.set("severity", severityFilter);
-      if (vendorFilter !== "ALL") params.set("vendor", vendorFilter);
-      if (search.trim() !== "") params.set("search", search.trim());
-      params.set("page_size", "50");
+        const res = await fetch(`/api/review-queue?${params.toString()}`, {
+          cache: "no-store",
+        });
 
-      const res = await fetch(`${API_BASE}/reconcile/queue?${params.toString()}`);
-      if (!res.ok) throw new Error("Gagal mengambil data antrean");
-      const data = await res.json();
-      setItems(data.items || []);
-      if (data.summary) {
-        setSummary(data.summary);
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          throw new Error(errJson?.error || `Gagal mengambil data antrean (HTTP ${res.status})`);
+        }
+
+        const data = await res.json();
+        setItems(data.items || []);
+        if (data.summary) {
+          setSummary(data.summary);
+        }
+        if (isManualRefresh) {
+          showToast("Data antrean berhasil diperbarui", "success");
+        }
+        if (onRefresh) onRefresh();
+      } catch (err: any) {
+        console.error("Queue fetch error:", err);
+        setErrorMessage(err?.message || "Terjadi kesalahan saat menghubungi server.");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("Queue fetch error:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [statusFilter, severityFilter, vendorFilter, search]);
+    },
+    [statusFilter, severityFilter, vendorFilter, search, onRefresh, showToast]
+  );
 
   useEffect(() => {
     fetchQueueData();
@@ -118,50 +118,72 @@ export function ReviewQueue({
 
   // Unique vendors from items
   const vendors = useMemo(() => {
-    const set = new Set(items.map((i) => i.vendor_id));
-    return Array.from(set);
+    const set = new Set(items.map((i) => i.vendor_name || i.vendor_id));
+    return Array.from(set).filter(Boolean);
   }, [items]);
 
-  const renderStatusBadge = (status: ReconciliationStatus) => {
-    switch (status) {
-      case "MATCH":
-        return <Badge variant="success" className="text-[10px] font-bold py-0">MATCH</Badge>;
-      case "EXCEPTION":
-        return <Badge variant="destructive" className="text-[10px] font-bold py-0">EXCEPTION</Badge>;
-      case "DUPLICATE":
-        return <Badge variant="brand" className="text-[10px] font-bold py-0">DUPLICATE</Badge>;
-      case "APPROVED":
-        return <Badge variant="success" className="text-[10px] font-bold py-0 bg-emerald-600 text-white">APPROVED</Badge>;
-      case "DISPUTED":
-        return <Badge variant="destructive" className="text-[10px] font-bold py-0 bg-orange-600 text-white">DISPUTED</Badge>;
-      case "REJECTED":
-        return <Badge variant="outline" className="text-[10px] font-bold py-0 text-slate-500">REJECTED</Badge>;
-      case "INSUFFICIENT_EVIDENCE":
-        return <Badge variant="warning" className="text-[10px] font-bold py-0">UNCONFIRMED</Badge>;
+  // Group items by ingest batch
+  const folderGroups = useMemo(() => {
+    const groups = new Map<string, QueueItem[]>();
+    items.forEach((item) => {
+      const key = item.ingest_batch_id || "batch-default";
+      groups.set(key, [...(groups.get(key) || []), item]);
+    });
+    return Array.from(groups.entries()).map(([id, groupItems]) => {
+      const totalBilled = groupItems.reduce((acc, it) => acc + (it.billed_amount || 0), 0);
+      const totalVariance = groupItems.reduce((acc, it) => acc + (it.variance_amount || 0), 0);
+      const hasCritical = groupItems.some((it) => it.highest_severity === "CRITICAL");
+      const hasHigh = groupItems.some((it) => it.highest_severity === "HIGH");
+      const highestSeverity = hasCritical ? "CRITICAL" : hasHigh ? "HIGH" : "MEDIUM";
+
+      return {
+        id,
+        items: groupItems,
+        label:
+          id === "batch-default"
+            ? "Antrean Tagihan Siap Audit"
+            : `Batch Ingest ${id.slice(0, 8)}`,
+        totalBilled,
+        totalVariance,
+        highestSeverity,
+      };
+    });
+  }, [items]);
+
+  const renderSeverityBadge = (severity?: string) => {
+    switch (severity) {
+      case "CRITICAL":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-2xs">
+            CRITICAL
+          </span>
+        );
+      case "HIGH":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-600 text-white shadow-2xs">
+            HIGH
+          </span>
+        );
+      case "MEDIUM":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-2xs">
+            MEDIUM
+          </span>
+        );
+      case "LOW":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white shadow-2xs">
+            LOW
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-700">
+            {severity || "-"}
+          </span>
+        );
     }
   };
-
-  const totalInvoiced = useMemo(
-    () => items.reduce((sum, item) => sum + (item.billed_amount || 0), 0),
-    [items]
-  );
-  const totalVariance = useMemo(
-    () => items.reduce((sum, item) => sum + (item.variance_amount || 0), 0),
-    [items]
-  );
-  const totalInvoicesCount = items.length;
-  const openExceptionsCount = useMemo(
-    () => items.filter((i) => ["EXCEPTION", "DUPLICATE", "INSUFFICIENT_EVIDENCE"].includes(i.status)).length,
-    [items]
-  );
-  const urgentDisputesCount = useMemo(
-    () => items.filter((i) => (i.days_remaining_to_dispute ?? 0) <= 7 && ["EXCEPTION", "DUPLICATE", "INSUFFICIENT_EVIDENCE"].includes(i.status)).length,
-    [items]
-  );
-  const matchesCount = useMemo(
-    () => items.filter((i) => i.status === "MATCH" || i.status === "APPROVED").length,
-    [items]
-  );
 
   return (
     <div className="space-y-6 max-w-7xl font-sans">
@@ -181,19 +203,27 @@ export function ReviewQueue({
 
       {/* 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Invoiced Spend */}
         <Card className="border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all bg-white rounded-2xl">
           <CardHeader className="p-4 pb-1 space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Invoiced Spend</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Total Invoiced Spend
+            </span>
             <CardTitle className="text-xl font-extrabold text-slate-900 tracking-tight font-tabular">
-              {formatCompactIDR(totalInvoiced)}
+              {isLoading ? (
+                <div className="h-7 w-28 bg-slate-200 animate-pulse rounded" />
+              ) : (
+                formatCompactIDR(summary.total_invoiced_amount)
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-1 text-[11px] text-slate-500 flex items-center gap-1.5">
             <DollarSign className="h-3.5 w-3.5 text-[#243A5E]" />
-            <span>Dari {totalInvoicesCount} total tagihan di-audit</span>
+            <span>Dari {summary.total_invoices_count} total tagihan di-audit</span>
           </CardContent>
         </Card>
 
+        {/* Card 2: Potensi Kebocoran (Overcharge) */}
         <Card className="border border-rose-200/80 bg-rose-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
           <CardHeader className="p-4 pb-1 space-y-0.5">
             <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
@@ -201,7 +231,11 @@ export function ReviewQueue({
               <TrendingDown className="h-3.5 w-3.5 text-rose-600" />
             </span>
             <CardTitle className="text-xl font-extrabold text-rose-950 tracking-tight font-tabular">
-              +{formatCompactIDR(totalVariance)}
+              {isLoading ? (
+                <div className="h-7 w-28 bg-rose-200 animate-pulse rounded" />
+              ) : (
+                `+${formatCompactIDR(summary.total_variance_amount)}`
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-1 text-[11px] text-rose-700">
@@ -209,6 +243,7 @@ export function ReviewQueue({
           </CardContent>
         </Card>
 
+        {/* Card 3: Antrean Anomali Aktif */}
         <Card className="border border-amber-200/80 bg-amber-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
           <CardHeader className="p-4 pb-1 space-y-0.5">
             <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
@@ -216,15 +251,20 @@ export function ReviewQueue({
               <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
             </span>
             <CardTitle className="text-xl font-extrabold text-amber-950 tracking-tight font-tabular">
-              {openExceptionsCount} Kasus
+              {isLoading ? (
+                <div className="h-7 w-20 bg-amber-200 animate-pulse rounded" />
+              ) : (
+                `${summary.open_exceptions_count} Kasus`
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-1 text-[11px] text-amber-700 flex items-center gap-1">
             <Clock className="h-3 w-3 text-amber-600" />
-            <span>{urgentDisputesCount} kasus sisa waktu ≤ 7 hari</span>
+            <span>{summary.urgent_disputes_count} kasus sisa waktu ≤ 7 hari</span>
           </CardContent>
         </Card>
 
+        {/* Card 4: Clean Matches / Siap Bayar */}
         <Card className="border border-emerald-200/80 bg-emerald-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
           <CardHeader className="p-4 pb-1 space-y-0.5">
             <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
@@ -232,16 +272,30 @@ export function ReviewQueue({
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
             </span>
             <CardTitle className="text-xl font-extrabold text-emerald-950 tracking-tight font-tabular">
-              {matchesCount} Tagihan
+              {isLoading ? (
+                <div className="h-7 w-20 bg-emerald-200 animate-pulse rounded" />
+              ) : (
+                `${summary.matches_count} Tagihan`
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-emerald-700">
+          <CardContent className="p-4 pt-1 text-[11px] text-emerald-700 flex items-center justify-between">
             <span>100% cocok dengan tarif &amp; bukti POD</span>
+            {onNavigateToFinalApproval && summary.matches_count > 0 && (
+              <button
+                type="button"
+                onClick={onNavigateToFinalApproval}
+                className="text-[11px] font-bold text-emerald-800 hover:underline cursor-pointer flex items-center gap-0.5"
+              >
+                <span>Final Approval</span>
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Filter & Table Area */}
+      {/* Filter & Folder List Area */}
       <Card className="border border-slate-200/90 shadow-2xs bg-white rounded-2xl overflow-hidden">
         <CardHeader className="p-4 pb-3 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           {/* Search */}
@@ -269,10 +323,6 @@ export function ReviewQueue({
               <option value="EXCEPTION">Exception</option>
               <option value="DUPLICATE">Duplicate</option>
               <option value="INSUFFICIENT_EVIDENCE">Unconfirmed</option>
-              <option value="MATCH">Match (Lolos)</option>
-              <option value="APPROVED">Approved</option>
-              <option value="DISPUTED">Disputed</option>
-              <option value="REJECTED">Rejected</option>
             </select>
 
             {/* Severity Filter */}
@@ -282,6 +332,7 @@ export function ReviewQueue({
               className="h-8.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 cursor-pointer"
             >
               <option value="ALL">Semua Tingkat Risiko</option>
+              <option value="CRITICAL">Kritis (CRITICAL)</option>
               <option value="HIGH">Risiko Tinggi (HIGH)</option>
               <option value="MEDIUM">Risiko Sedang (MEDIUM)</option>
               <option value="LOW">Risiko Rendah (LOW)</option>
@@ -295,19 +346,23 @@ export function ReviewQueue({
             >
               <option value="ALL">Semua Vendor</option>
               {vendors.map((v) => (
-                <option key={v} value={v}>{v}</option>
+                <option key={v} value={v}>
+                  {v}
+                </option>
               ))}
             </select>
 
-            {/* Refresh */}
+            {/* Refresh Button */}
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchQueueData}
+              onClick={() => fetchQueueData(true)}
               disabled={isLoading}
-              className="h-8.5 px-2.5 text-xs font-semibold bg-white border-slate-200 rounded-xl cursor-pointer"
+              className="h-8.5 px-3 text-xs font-semibold bg-white border-slate-200 rounded-xl cursor-pointer gap-1.5"
+              title="Refresh Data"
             >
               <RotateCw className={`h-3.5 w-3.5 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Refresh Data</span>
             </Button>
           </div>
         </CardHeader>
@@ -316,151 +371,122 @@ export function ReviewQueue({
         {statusFilter === "ANOMALI" && (
           <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-[11px] text-amber-800 flex items-center gap-2">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            <span>Menampilkan transaksi anomali saja (EXCEPTION, DUPLICATE, INSUFFICIENT_EVIDENCE). Transaksi MATCH langsung masuk <strong>Final Approval</strong>.</span>
+            <span>
+              Menampilkan folder berkas transaksi anomali (EXCEPTION, DUPLICATE, INSUFFICIENT_EVIDENCE).
+              Transaksi MATCH langsung masuk ke <strong>Final Approval</strong>.
+            </span>
           </div>
         )}
 
-        {/* Table Body */}
+        {/* Content: Folder Cards Only (No Dropdown, No Per-File Rows) */}
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-16 text-center text-xs text-slate-500 space-y-2">
-              <div className="animate-spin w-6 h-6 border-2 border-[#1B2A4A] border-t-transparent rounded-full mx-auto" />
-              <span>Memuat antrean rekonsiliasi...</span>
+            /* Skeleton Loading State */
+            <div className="p-6 space-y-4">
+              <div className="h-20 bg-slate-100 animate-pulse rounded-2xl" />
+              <div className="text-center text-xs text-slate-400 pt-2 flex items-center justify-center gap-2">
+                <RotateCw className="h-3.5 w-3.5 animate-spin" />
+                <span>Memuat folder antrean anomali dari Supabase...</span>
+              </div>
             </div>
-          ) : items.length === 0 ? (
+          ) : errorMessage ? (
+            /* Error State */
+            <div className="p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-800">Gagal Memuat Antrean Anomali</p>
+                <p className="text-xs text-rose-600 max-w-md mx-auto">{errorMessage}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => fetchQueueData(true)}
+                className="text-xs font-semibold mt-2 cursor-pointer"
+              >
+                <RotateCw className="h-3.5 w-3.5 mr-1.5" />
+                <span>Coba Lagi</span>
+              </Button>
+            </div>
+          ) : folderGroups.length === 0 || items.length === 0 ? (
+            /* Empty State */
             <div className="p-16 text-center text-xs text-slate-400 space-y-2">
               <Inbox className="h-8 w-8 text-slate-300 mx-auto" />
               <p>Tidak ada transaksi anomali saat ini. Semua transaksi sudah bersih atau telah diproses.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4">Prioritas</th>
-                    <th className="py-3 px-3">Nomor Faktur / Ref</th>
-                    <th className="py-3 px-3">Mitra 3PL</th>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3">Temuan Utama</th>
-                    <th className="py-3 px-3">Nilai Tagih</th>
-                    <th className="py-3 px-3">Ekspektasi</th>
-                    <th className="py-3 px-3">Selisih</th>
-                    <th className="py-3 px-4 text-right">Bukti / Evidence</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {items.map((item) => {
-                    const isSelected = selectedEventId === item.event_id;
-                    const computedVariance = (item.billed_amount && item.expected_amount)
-                      ? (item.billed_amount - item.expected_amount)
-                      : (item.variance_amount || 0);
-                    const isOvercharge = computedVariance > 0;
-                    const isUndercharge = computedVariance < 0;
-                    const isAnomalous = ["EXCEPTION", "DUPLICATE", "INSUFFICIENT_EVIDENCE"].includes(item.status);
+            /* Folder Rows (Folder Saja, Tanpa Dropdown Baris File) */
+            <div className="divide-y divide-slate-100">
+              {folderGroups.map((folder) => {
+                const firstItem = folder.items[0];
+                const anomalyCount = folder.items.filter((i) =>
+                  ["EXCEPTION", "DUPLICATE", "INSUFFICIENT_EVIDENCE"].includes(i.status)
+                ).length;
 
-                    return (
-                      <tr
-                        key={item.event_id}
-                        onClick={() => onSelectTransaction(item.event_id)}
-                        className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                          isSelected ? "bg-[#EDF4FA]/70 font-semibold" : ""
-                        }`}
-                      >
-                        {/* Priority Score */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`inline-block w-2 h-2 rounded-full ${
-                                item.priority_level === "HIGH"
-                                  ? "bg-rose-500"
-                                  : item.priority_level === "MEDIUM"
-                                  ? "bg-amber-500"
-                                  : "bg-emerald-500"
-                              }`}
-                            />
-                            <span className="font-mono text-xs font-bold text-slate-700">
-                              {(item.priority_score || 0).toFixed(0)}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Invoice & Shipment */}
-                        <td className="py-3 px-3">
-                          <div className="min-w-0">
-                            <span className="font-extrabold text-slate-900 font-mono block">{item.invoice_number}</span>
-                            <span className="text-[10px] text-slate-400 font-mono block truncate max-w-[140px]">{item.shipment_id}</span>
-                          </div>
-                        </td>
-
-                        {/* Vendor Name */}
-                        <td className="py-3 px-3">
-                          <span className="font-semibold text-slate-800 block truncate max-w-xs">{item.vendor_name || item.vendor_id}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{item.vendor_id}</span>
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3 px-3">{renderStatusBadge(item.status)}</td>
-
-                        {/* Primary Discrepancy */}
-                        <td className="py-3 px-3">
-                          {(item.primary_discrepancy || item.top_discrepancy || (computedVariance !== 0 && isAnomalous)) ? (
-                            <span
-                              className={`text-[11px] font-bold px-2 py-0.5 rounded border block truncate max-w-[170px] ${
-                                isOvercharge
-                                  ? "text-rose-700 bg-rose-50 border-rose-200"
-                                  : "text-amber-700 bg-amber-50 border-amber-200"
-                              }`}
-                              title={item.primary_discrepancy || item.top_discrepancy || (isOvercharge ? `Overcharge +${formatIDR(computedVariance)}` : `Discrepancy -${formatIDR(Math.abs(computedVariance))}`)}
-                            >
-                              {item.primary_discrepancy || item.top_discrepancy || (isOvercharge ? `[RATE_OVERCHARGE] +${formatIDR(computedVariance)}` : `[PRICE_DISCREPANCY] -${formatIDR(Math.abs(computedVariance))}`)}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 italic">Tidak ada anomali</span>
-                          )}
-                        </td>
-
-                        {/* Billed Amount */}
-                        <td className="py-3 px-3 font-mono font-medium text-slate-700">{formatIDR(item.billed_amount)}</td>
-
-                        {/* Expected Amount */}
-                        <td className="py-3 px-3 font-mono font-medium text-slate-600">{formatIDR(item.expected_amount)}</td>
-
-                        {/* Variance */}
-                        <td className="py-3 px-3">
-                          {computedVariance === 0 ? (
-                            <span className="text-slate-400 font-mono text-xs">Rp 0</span>
-                          ) : isOvercharge ? (
-                            <span className="font-mono text-xs font-bold text-rose-700">
-                              +{formatIDR(computedVariance)}
-                            </span>
-                          ) : (
-                            <span className="font-mono text-xs font-bold text-amber-700">
-                              -{formatIDR(Math.abs(computedVariance))}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Action: Direct Evidence Inspection */}
-                        <td className="py-3 px-4 text-right">
-                          <Button
-                            size="sm"
+                return (
+                  <div
+                    key={folder.id}
+                    className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white hover:bg-slate-50/70 transition-colors"
+                  >
+                    {/* Folder Info */}
+                    <div className="flex items-start sm:items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                        <Folder className="h-6 w-6 text-amber-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-extrabold text-sm text-slate-900">{folder.label}</span>
+                          <Badge
                             variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectTransaction(item.event_id);
-                            }}
-                            className="h-7 px-3 text-[11px] font-bold text-[#243A5E] hover:text-white hover:bg-[#243A5E] border-slate-300 gap-1.5 shadow-2xs cursor-pointer ml-auto transition-all"
-                            title="Inspect Bukti Spasial Dokumen di Evidence Workspace"
+                            className="text-[11px] font-semibold border-slate-300 text-slate-600"
                           >
-                            <span>Lihat Bukti</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            {folder.items.length} transaksi
+                          </Badge>
+                          {anomalyCount > 0 && (
+                            <Badge className="text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              {anomalyCount} anomali
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-500">
+                          <span>
+                            Total Tagihan:{" "}
+                            <strong className="text-slate-800 font-mono">
+                              {formatIDR(folder.totalBilled)}
+                            </strong>
+                          </span>
+                          <span>•</span>
+                          <span>
+                            Potensi Selisih:{" "}
+                            <strong className="text-rose-700 font-mono">
+                              +{formatIDR(folder.totalVariance)}
+                            </strong>
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            Risiko Tertinggi: {renderSeverityBadge(folder.highestSeverity)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Button: Lihat Detail */}
+                    {firstItem && (
+                      <Button
+                        size="sm"
+                        onClick={() => onSelectTransaction(firstItem.event_id, folder.items)}
+                        className="h-9 px-4 text-xs font-bold bg-[#243A5E] hover:bg-[#1B2A4A] text-white gap-2 shadow-xs cursor-pointer transition-all shrink-0 ml-auto md:ml-0"
+                        title="Buka Lembar Kerja Seluruh Transaksi Batch"
+                      >
+                        <span>Lihat Detail</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

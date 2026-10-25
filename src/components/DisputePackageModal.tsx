@@ -5,6 +5,7 @@ import { DisputePackage } from "@/types/reconciliation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getDisputePackage } from "@/lib/api";
 import { Separator } from "@/components/ui/separator";
 import {
   FileText,
@@ -39,9 +40,7 @@ export function DisputePackageModal({
 
     async function loadDisputePackage() {
       try {
-        const res = await fetch(`http://localhost:8080/api/v1/reconcile/${eventId}/dispute-package`);
-        if (!res.ok) throw new Error("Gagal mengambil paket klaim sengketa.");
-        const data = await res.json();
+        const data = await getDisputePackage(eventId);
         if (isMounted) {
           setPkg(data);
           setIsLoading(false);

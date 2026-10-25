@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { API_V1 } from "@/lib/config";
 import {
   UploadCloud,
   FileText,
@@ -17,13 +18,16 @@ import {
   Plus,
   Download,
   RotateCw,
-  Eye,
   FileCheck2,
+  Folder,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
+import { BatchHitlReviewModal } from "./BatchHitlReviewModal";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_SIZE_MB = 10;
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = API_V1;
 
 interface QueuedFile {
   id: string;
@@ -51,6 +55,7 @@ interface SavedDocItem {
   classification: string;
   classification_confidence: number;
   created_at: string;
+  ingest_batch_id?: string;
 }
 
 export function UploadDropzone() {
@@ -59,6 +64,9 @@ export function UploadDropzone() {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const ingestBatchIdRef = useRef(crypto.randomUUID());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [reviewDocumentIds, setReviewDocumentIds] = useState<string[] | null>(null);
 
   // Saved documents in Supabase DB state
   const [savedDocs, setSavedDocs] = useState<SavedDocItem[]>([]);
@@ -157,6 +165,7 @@ export function UploadDropzone() {
   const handleClearAll = () => {
     setFileQueue([]);
     setGlobalError(null);
+    ingestBatchIdRef.current = crypto.randomUUID();
   };
 
   const handleUpdateDocType = (id: string, newType: string) => {
@@ -177,6 +186,7 @@ export function UploadDropzone() {
 
     const formData = new FormData();
     formData.append("file", item.file);
+    formData.append("ingest_batch_id", ingestBatchIdRef.current);
     if (item.docType !== "AUTO") {
       formData.append("document_type", item.docType);
     }
@@ -192,7 +202,8 @@ export function UploadDropzone() {
         throw new Error(errJson.error || `Upload gagal (Status ${res.status})`);
       }
 
-      const data = await res.json();
+      const response = await res.json();
+      const data = response.data ?? response;
       return {
         ...item,
         status: data.is_duplicate ? "DUPLICATE" : "SUCCESS",
@@ -216,17 +227,25 @@ export function UploadDropzone() {
   // Batch upload all ready files
   const handleBatchUpload = async () => {
     const readyItems = fileQueue.filter((i) => i.status === "READY");
-    if (readyItems.length === 0) return;
+    if (readyItems.length === 0) {
+      setGlobalError("Pilih minimal satu dokumen untuk memulai ekstraksi AI dan audit mapping.");
+      return;
+    }
 
     setIsBatchUploading(true);
     setGlobalError(null);
 
+    const reviewedIDs: string[] = [];
     for (const item of readyItems) {
       setFileQueue((prev) =>
         prev.map((it) => (it.id === item.id ? { ...it, status: "UPLOADING" } : it))
       );
 
       const updated = await uploadSingleItem(item);
+
+      if ((updated.status === "SUCCESS" || updated.status === "DUPLICATE") && updated.result?.document_id) {
+        reviewedIDs.push(updated.result.document_id);
+      }
 
       setFileQueue((prev) =>
         prev.map((it) => (it.id === item.id ? updated : it))
@@ -236,11 +255,26 @@ export function UploadDropzone() {
     setIsBatchUploading(false);
     // Refresh the live documents table
     fetchRecentDocs();
+    // Every successful upload immediately opens the field-level review. A
+    // single document is a valid unit of AI extraction and human approval.
+    if (reviewedIDs.length > 0) setReviewDocumentIds([...new Set(reviewedIDs)]);
   };
 
   const readyItemsCount = fileQueue.filter((i) => i.status === "READY").length;
   const successItemsCount = fileQueue.filter((i) => i.status === "SUCCESS" || i.status === "DUPLICATE").length;
   const errorItemsCount = fileQueue.filter((i) => i.status === "ERROR").length;
+  const documentFolders = useMemo(() => {
+    const groups = new Map<string, SavedDocItem[]>();
+    savedDocs.forEach((doc) => {
+      const key = doc.ingest_batch_id || "legacy";
+      groups.set(key, [...(groups.get(key) || []), doc]);
+    });
+    return Array.from(groups.entries()).map(([id, documents]) => ({
+      id,
+      documents,
+      label: id === "legacy" ? "Dokumen sebelum sistem batch" : `Folder upload ${id.slice(0, 8)}`,
+    }));
+  }, [savedDocs]);
 
   return (
     <div className="space-y-6 max-w-5xl font-sans">
@@ -352,7 +386,7 @@ export function UploadDropzone() {
                   <Button
                     type="button"
                     onClick={handleBatchUpload}
-                    disabled={readyItemsCount === 0 || isBatchUploading}
+                    disabled={readyItemsCount < 2 || isBatchUploading}
                     className="bg-[#1B2A4A] text-white hover:bg-sky-600 font-bold text-xs h-8 px-4 gap-2 cursor-pointer"
                   >
                     {isBatchUploading ? (
@@ -363,7 +397,7 @@ export function UploadDropzone() {
                     ) : (
                       <>
                         <Sparkles className="h-3.5 w-3.5 text-sky-300" />
-                        <span>Unggah Semua ({readyItemsCount})</span>
+                        <span>Unggah & Audit Batch ({readyItemsCount})</span>
                       </>
                     )}
                   </Button>
@@ -506,20 +540,41 @@ export function UploadDropzone() {
               Belum ada dokumen yang terdaftar di database.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4">Nama Dokumen</th>
-                    <th className="py-3 px-3">Tipe</th>
-                    <th className="py-3 px-3">Ukuran</th>
-                    <th className="py-3 px-3">Waktu Masuk</th>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-4 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {savedDocs.map((doc) => {
+            <div className="divide-y divide-slate-100">
+              {documentFolders.map((folder) => {
+                const isExpanded = expandedFolders.has(folder.id);
+                return (
+                  <div key={folder.id}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedFolders((previous) => {
+                        const next = new Set(previous);
+                        if (next.has(folder.id)) next.delete(folder.id);
+                        else next.add(folder.id);
+                        return next;
+                      })}
+                      className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+                    >
+                      {isExpanded ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
+                      <Folder className="h-5 w-5 text-amber-500" />
+                      <span className="font-bold text-slate-800">{folder.label}</span>
+                      <Badge variant="outline" className="text-[10px]">{folder.documents.length} file</Badge>
+                    </button>
+                    {isExpanded && (
+                      <div className="overflow-x-auto border-t border-slate-100">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                            <tr>
+                              <th className="py-3 px-4">Nama Dokumen</th>
+                              <th className="py-3 px-3">Tipe</th>
+                              <th className="py-3 px-3">Ukuran</th>
+                              <th className="py-3 px-3">Waktu Masuk</th>
+                              <th className="py-3 px-3">Status</th>
+                              <th className="py-3 px-4 text-right">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-medium">
+                            {folder.documents.map((doc) => {
                     const isPdf = doc.filename.toLowerCase().endsWith(".pdf");
                     const dateFormatted = doc.created_at
                       ? new Date(doc.created_at).toLocaleString("id-ID", {
@@ -528,7 +583,7 @@ export function UploadDropzone() {
                         })
                       : "-";
 
-                    return (
+                                return (
                       <tr key={doc.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
@@ -576,26 +631,29 @@ export function UploadDropzone() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <a
-                            href={`${API_BASE}/documents/${doc.id}/download`}
-                            download={doc.filename}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-sky-700 hover:text-white hover:bg-[#1B2A4A] transition-colors border border-sky-200"
-                          >
+                          <a href={`${API_BASE}/documents/${doc.id}/download`} download={doc.filename} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-sky-200 px-2.5 py-1 text-[11px] font-bold text-sky-700 transition-colors hover:bg-[#1B2A4A] hover:text-white">
                             <Download className="h-3 w-3" />
                             <span>Unduh</span>
                           </a>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
           )}
         </CardContent>
       </Card>
+      {reviewDocumentIds && <BatchHitlReviewModal documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} onFinalized={(eventId) => {
+        setReviewDocumentIds(null);
+        window.location.assign(`/dashboard?event=${encodeURIComponent(eventId)}`);
+      }} />}
     </div>
   );
 }

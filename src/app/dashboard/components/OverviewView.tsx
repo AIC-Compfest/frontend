@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { QueueSummary } from "@/types/reconciliation";
+import { API_V1 } from "@/lib/config";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ interface OverviewViewProps {
   onSelectTransaction: (eventId: string) => void;
 }
 
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = API_V1;
 
 export function OverviewView({
   summary: initialSummary,

@@ -3,8 +3,9 @@
  * Interacts with /api/v1/auth/* Go Backend & Supabase Database.
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+import { requireApiOrigin } from "./config";
+
+const apiBaseURL = () => requireApiOrigin();
 
 const AUTH_TOKEN_KEY = "aic_auth_token";
 const AUTH_USER_KEY = "aic_auth_user";
@@ -72,7 +73,7 @@ export async function loginUser(
   email: string,
   password: string
 ): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+  const res = await fetch(`${apiBaseURL()}/api/v1/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -95,7 +96,7 @@ export async function registerUser(payload: {
   company_name?: string;
   role?: string;
 }): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+  const res = await fetch(`${apiBaseURL()}/api/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -115,7 +116,7 @@ export async function fetchCurrentUser(): Promise<UserProfile> {
   const token = getStoredToken();
   if (!token) throw new Error("No token stored");
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
+  const res = await fetch(`${apiBaseURL()}/api/v1/auth/me`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

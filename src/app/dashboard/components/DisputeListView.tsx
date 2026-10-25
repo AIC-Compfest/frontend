@@ -5,12 +5,13 @@ import { QueueItem } from "@/types/reconciliation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RotateCw, ArrowRight, AlertTriangle, Inbox } from "lucide-react";
+import { API_V1 } from "@/lib/config";
 
 interface DisputeListViewProps {
   onSelectTransaction: (eventId: string) => void;
 }
 
-const API_BASE = "http://localhost:8080/api/v1";
+const API_BASE = API_V1;
 
 export function DisputeListView({ onSelectTransaction }: DisputeListViewProps) {
   const [items, setItems] = useState<QueueItem[]>([]);
