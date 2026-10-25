@@ -30,7 +30,7 @@ export function asTablePayload(value: unknown): TablePayload | null {
 
 export function hasSuggestion(value: unknown, rawText?: string): boolean {
   if (value === null || value === undefined) return Boolean(rawText?.trim());
-  if (typeof value === "string") return value.trim() !== "" || Boolean(rawText?.trim());
+  if (typeof value === "string") return value.trim() !== "" && value.length <= 160 && !/[\r\n]/.test(value);
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === "object") return Object.keys(value).length > 0;
   return true;
