@@ -227,6 +227,7 @@ export interface ShipmentEvent {
   event_id: string;
   shipment_id: string;
   vendor_id: string;
+  ingest_batch_id?: string;
   match_method: string;
   match_confidence: number;
   invoice: InvoiceCanonical;

@@ -23,7 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { BatchHitlReviewModal } from "./BatchHitlReviewModal";
+import { BatchHitlReviewModal_Compact } from "./BatchHitlReviewModal_Compact";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_SIZE_MB = 10;
@@ -650,7 +650,7 @@ export function UploadDropzone() {
           )}
         </CardContent>
       </Card>
-      {reviewDocumentIds && <BatchHitlReviewModal documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} onFinalized={(eventId) => {
+      {reviewDocumentIds && <BatchHitlReviewModal_Compact documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} onFinalized={(eventId) => {
         setReviewDocumentIds(null);
         window.location.assign(`/dashboard?event=${encodeURIComponent(eventId)}`);
       }} />}

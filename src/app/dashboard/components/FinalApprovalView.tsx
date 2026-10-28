@@ -148,64 +148,29 @@ export function FinalApprovalView({
 
   return (
     <div className="space-y-6 max-w-7xl font-sans">
-      {/* 1. Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <h2 className="text-xl font-extrabold text-[#1B2A4A] tracking-tight">
-              Executive Final Approval (Segregation of Duties)
-            </h2>
-            <Badge variant="success" className="text-[10px] font-bold py-0.5 px-2">
-              Tier-2 Sign-Off
-            </Badge>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Portal otorisasi pencairan dana (*Payment Release*) khusus untuk <strong>Financial Controller / CFO</strong> sesuai prinsip tata kelola <em>Segregation of Duties (SoD)</em>.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchSodData}
-            disabled={isLoading}
-            className="text-xs font-semibold gap-1.5 h-8.5 bg-white border-slate-300 shadow-xs cursor-pointer"
-          >
-            <RotateCw className={`h-3.5 w-3.5 text-[#1B2A4A] ${isLoading ? "animate-spin" : ""}`} />
-            <span>Refresh Data</span>
-          </Button>
-        </div>
+      {/* 1. Top Header - Simplified */}
+      <div className="space-y-2">
+        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          Final Approval
+        </h2>
       </div>
 
-      {/* 2. Sub-Navigation Switcher (Targeted Query Switcher) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+      {/* 2. Sub-Navigation Switcher */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-200/80 pb-3">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setSodTab("PENDING");
               setSelectedIds([]);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               sodTab === "PENDING"
-                ? "bg-[#1B2A4A] text-white shadow-xs"
+                ? "bg-slate-900 text-white shadow-xs"
                 : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            <ShieldCheck className="h-4 w-4" />
             <span>Menunggu Otorisasi</span>
-            <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                sodTab === "PENDING"
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30"
-                  : "bg-slate-100 text-slate-700"
-              }`}
-            >
-              status=MATCH
-            </span>
           </button>
 
           <button
@@ -213,37 +178,16 @@ export function FinalApprovalView({
               setSodTab("HISTORY");
               setSelectedIds([]);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               sodTab === "HISTORY"
-                ? "bg-[#1B2A4A] text-white shadow-xs"
+                ? "bg-slate-900 text-white shadow-xs"
                 : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            <History className="h-4 w-4 text-sky-400" />
-            <span>Riwayat Otorisasi (Approved)</span>
-            <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                sodTab === "HISTORY"
-                  ? "bg-sky-500/20 text-sky-300 border border-sky-400/30"
-                  : "bg-slate-100 text-slate-700"
-              }`}
-            >
-              status=APPROVED
-            </span>
+            <History className="h-4 w-4" />
+            <span>Riwayat Otorisasi</span>
           </button>
         </div>
-
-        {sodTab === "PENDING" && (
-          <Button
-            size="sm"
-            onClick={() => setShowConfirmModal(true)}
-            disabled={selectedIds.length === 0 || isAuthorizing}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs h-8.5 px-4 gap-2 shadow-xs cursor-pointer disabled:opacity-40"
-          >
-            <CheckCheck className="h-4 w-4" />
-            <span>Authorize Selected ({selectedIds.length})</span>
-          </Button>
-        )}
       </div>
 
       {/* ========================================================================= */}
@@ -251,84 +195,44 @@ export function FinalApprovalView({
       {/* ========================================================================= */}
       {sodTab === "PENDING" && (
         <div className="space-y-6">
-          {/* Governance Banner */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-[#1B2A4A] to-[#243A5E] text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1 max-w-2xl">
-              <div className="flex items-center gap-2 text-sky-300 text-xs font-bold uppercase tracking-wider">
-                <Lock className="h-3.5 w-3.5" />
-                <span>Prinsip Dual-Control Governance (SoD) Aktif</span>
-              </div>
-              <p className="text-xs text-slate-200 leading-relaxed">
-                Transaksi pada daftar ini berstatus <strong>MATCH</strong>. Selaku <strong>Financial Controller</strong>, persetujuan Anda akan menerbitkan instruksi pencairan kas dan memindahkannya ke tab Riwayat.
-              </p>
-            </div>
-          </div>
-
           {/* 4 Summary KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border border-slate-200/90 shadow-xs bg-white rounded-2xl">
-              <CardHeader className="p-4 pb-1 space-y-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Total Dana Siap Cair (Disbursement)
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card className="border border-slate-200 shadow-sm bg-white rounded-lg">
+              <CardHeader className="p-4 space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Total Dana Siap Cair
                 </span>
-                <CardTitle className="text-xl font-extrabold text-slate-900 font-tabular">
+                <CardTitle className="text-2xl font-bold text-slate-900 font-tabular">
                   {formatIDR(totalDisbursementSum)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-1 text-[11px] text-slate-500 flex items-center gap-1.5">
-                <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
-                <span>Dari {items.length} tagihan terverifikasi</span>
-              </CardContent>
             </Card>
 
-            <Card className="border border-emerald-200/80 bg-emerald-50/40 shadow-xs rounded-2xl">
-              <CardHeader className="p-4 pb-1 space-y-0.5">
-                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Clean Matches / Siap Release</span>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            <Card className="border border-slate-200 shadow-sm bg-white rounded-lg">
+              <CardHeader className="p-4 space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Clean Matches
                 </span>
-                <CardTitle className="text-xl font-extrabold text-emerald-950 font-tabular">
+                <CardTitle className="text-2xl font-bold text-slate-900 font-tabular">
                   {items.length} Tagihan
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-1 text-[11px] text-emerald-700">
-                <span>Siap sign-off oleh Controller</span>
-              </CardContent>
             </Card>
 
-            <Card className="border border-sky-200/80 bg-sky-50/40 shadow-xs rounded-2xl">
-              <CardHeader className="p-4 pb-1 space-y-0.5">
-                <span className="text-[10px] font-bold text-sky-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Potensi Kebocoran Dicegah</span>
-                  <Sparkles className="h-3.5 w-3.5 text-sky-600" />
+            <Card className="border border-slate-200 shadow-sm bg-white rounded-lg">
+              <CardHeader className="p-4 space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Potensi Kebocoran Dicegah
                 </span>
-                <CardTitle className="text-xl font-extrabold text-sky-950 font-tabular">
+                <CardTitle className="text-2xl font-bold text-slate-900 font-tabular">
                   {formatIDR(totalLeakageSum)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-1 text-[11px] text-sky-700">
-                <span>Dipotong dari koreksi overcharge AP</span>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-slate-200/90 shadow-xs bg-white rounded-2xl">
-              <CardHeader className="p-4 pb-1 space-y-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Status Kepatuhan SoD
-                </span>
-                <CardTitle className="text-xl font-extrabold text-slate-900 flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  <span>100% Compliant</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-1 text-[11px] text-slate-500">
-                <span>Tercatat pada Immutable Ledger</span>
-              </CardContent>
             </Card>
           </div>
 
           {/* Filter & Table Area */}
-          <Card className="border border-slate-200/90 shadow-xs bg-white rounded-2xl overflow-hidden">
+          <Card className="border border-slate-200 shadow-sm bg-white rounded-lg overflow-hidden">
             <CardHeader className="p-4 pb-3 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="relative flex-1 min-w-[260px]">
                 <Search className="h-4 w-4 absolute left-3 top-2.5 text-slate-400" />
@@ -341,7 +245,7 @@ export function FinalApprovalView({
                 />
               </div>
 
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-3">
                 <select
                   value={filterVendor}
                   onChange={(e) => setFilterVendor(e.target.value)}
@@ -352,6 +256,10 @@ export function FinalApprovalView({
                     <option key={v} value={v}>{v}</option>
                   ))}
                 </select>
+                <div className="text-xs text-slate-600 font-medium">
+                  <History className="inline h-3.5 w-3.5 mr-1" />
+                  Riwayat: {items.length} transaksi
+                </div>
               </div>
             </CardHeader>
 
@@ -400,9 +308,7 @@ export function FinalApprovalView({
                         <th className="py-3 px-3">Nomor Faktur / Ref</th>
                         <th className="py-3 px-3">Mitra 3PL</th>
                         <th className="py-3 px-3">Rute & Layanan</th>
-                        <th className="py-3 px-3">Nilai Tagih</th>
                         <th className="py-3 px-3">Nilai Disetujui (Disbursement)</th>
-                        <th className="py-3 px-3">Status SoD</th>
                         <th className="py-3 px-4 text-right">Aksi</th>
                       </tr>
                     </thead>
@@ -453,20 +359,10 @@ export function FinalApprovalView({
                               <span className="text-[10px] text-slate-400">TRUCKING_FTL</span>
                             </td>
 
-                            <td className="py-3 px-3 font-mono font-medium text-slate-600">
-                              {formatIDR(item.billed_amount)}
-                            </td>
-
                             <td className="py-3 px-3">
                               <span className="font-extrabold font-mono text-emerald-700 text-sm">
                                 {formatIDR(item.expected_amount || item.billed_amount)}
                               </span>
-                            </td>
-
-                            <td className="py-3 px-3">
-                              <Badge variant="brand" className="text-[10px] font-bold py-0.5 px-2">
-                                READY_FOR_RELEASE
-                              </Badge>
                             </td>
 
                             <td className="py-3 px-4 text-right">
@@ -509,90 +405,44 @@ export function FinalApprovalView({
       {/* ========================================================================= */}
       {sodTab === "HISTORY" && (
         <div className="space-y-6">
-          {/* History Banner */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-900 via-[#1B2A4A] to-[#243A5E] text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1 max-w-2xl">
-              <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-                <CheckCheck className="h-4 w-4" />
-                <span>Riwayat Otorisasi Pembayaran (Immutable Audit Ledger)</span>
-              </div>
-              <p className="text-xs text-slate-200 leading-relaxed">
-                Daftar transaksi dengan filter <strong>status = APPROVED</strong>. Data telah ditandatangani sah oleh <strong>Financial Controller</strong> dan tercatat pada audit trail.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Badge variant="success" className="text-xs font-bold py-1 px-3 bg-emerald-500/20 text-emerald-300 border-emerald-400/30 font-mono">
-                {items.length} Transaksi Approved
-              </Badge>
-            </div>
-          </div>
-
           {/* 4 Summary KPI Cards for History */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border border-emerald-200/80 bg-emerald-50/40 shadow-xs rounded-2xl">
-              <CardHeader className="p-4 pb-1 space-y-0.5">
-                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Total Dana Dicairkan (Released)</span>
-                  <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card className="border border-slate-200 shadow-sm bg-white rounded-lg">
+              <CardHeader className="p-4 space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Total Dana Dicairkan
                 </span>
-                <CardTitle className="text-xl font-extrabold text-emerald-950 font-tabular">
+                <CardTitle className="text-2xl font-bold text-slate-900 font-tabular">
                   {formatIDR(totalDisbursementSum)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-1 text-[11px] text-emerald-700">
-                <span>Dari {items.length} tagihan sah disetujui</span>
-              </CardContent>
             </Card>
 
-            <Card className="border border-slate-200/90 shadow-xs bg-white rounded-2xl">
-              <CardHeader className="p-4 pb-1 space-y-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <Card className="border border-slate-200 shadow-sm bg-white rounded-lg">
+              <CardHeader className="p-4 space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                   Total Faktur Disetujui
                 </span>
-                <CardTitle className="text-xl font-extrabold text-slate-900 font-tabular">
+                <CardTitle className="text-2xl font-bold text-slate-900 font-tabular">
                   {items.length} Tagihan
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-1 text-[11px] text-slate-500 flex items-center gap-1.5">
-                <FileCheck2 className="h-3.5 w-3.5 text-emerald-600" />
-                <span>100% Lolos Rekonsiliasi</span>
-              </CardContent>
             </Card>
 
-            <Card className="border border-sky-200/80 bg-sky-50/40 shadow-xs rounded-2xl">
-              <CardHeader className="p-4 pb-1 space-y-0.5">
-                <span className="text-[10px] font-bold text-sky-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Kebocoran Finansial Dicegah</span>
-                  <Sparkles className="h-3.5 w-3.5 text-sky-600" />
+            <Card className="border border-slate-200 shadow-sm bg-white rounded-lg">
+              <CardHeader className="p-4 space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Kebocoran Finansial Dicegah
                 </span>
-                <CardTitle className="text-xl font-extrabold text-sky-950 font-tabular">
+                <CardTitle className="text-2xl font-bold text-slate-900 font-tabular">
                   {formatIDR(totalLeakageSum)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-1 text-[11px] text-sky-700">
-                <span>Koreksi selisih tarif & overcharge</span>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-slate-200/90 shadow-xs bg-white rounded-2xl">
-              <CardHeader className="p-4 pb-1 space-y-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Status Jejak Audit
-                </span>
-                <CardTitle className="text-xl font-extrabold text-emerald-700 flex items-center gap-1.5">
-                  <UserCheck className="h-5 w-5 text-emerald-600" />
-                  <span>100% Verified</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-1 text-[11px] text-slate-500">
-                <span>Tersinkron ke tabel shipment_events</span>
-              </CardContent>
             </Card>
           </div>
 
           {/* History Table */}
-          <Card className="border border-slate-200/90 shadow-xs bg-white rounded-2xl overflow-hidden">
+          <Card className="border border-slate-200 shadow-sm bg-white rounded-lg overflow-hidden">
             <CardHeader className="p-4 pb-3 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="relative flex-1 min-w-[260px]">
                 <Search className="h-4 w-4 absolute left-3 top-2.5 text-slate-400" />
@@ -605,18 +455,16 @@ export function FinalApprovalView({
                 />
               </div>
 
-              <div className="flex items-center gap-2 text-xs">
-                <select
-                  value={filterVendor}
-                  onChange={(e) => setFilterVendor(e.target.value)}
-                  className="h-8.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 cursor-pointer"
-                >
-                  <option value="ALL">Semua Mitra 3PL ({vendors.length})</option>
-                  {vendors.map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={filterVendor}
+                onChange={(e) => setFilterVendor(e.target.value)}
+                className="h-8.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 cursor-pointer"
+              >
+                <option value="ALL">Semua Mitra 3PL ({vendors.length})</option>
+                {vendors.map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
             </CardHeader>
 
             <CardContent className="p-0">

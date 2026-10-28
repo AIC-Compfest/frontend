@@ -53,8 +53,8 @@ function DashboardContent() {
   const [currentEvent, setCurrentEvent] = useState<ShipmentEvent | null>(null);
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
 
-  // Evidence Viewer Controls
-  const [activeDocTab, setActiveDocTab] = useState<"INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT">("INVOICE");
+  // Evidence Viewer Controls - activeDocTab is now a document ID (string UUID)
+  const [activeDocTab, setActiveDocTab] = useState<string>("");
   const [selectedField, setSelectedField] = useState<string | null>(null);
 
   // Modal States
@@ -98,7 +98,7 @@ function DashboardContent() {
   const handleSelectTransaction = (eventId: string, allBatchItems?: QueueItem[]) => {
     setSelectedEventId(eventId);
     setSelectedField(null);
-    setActiveDocTab("INVOICE");
+    setActiveDocTab(""); // Will be auto-set by EvidenceViewer
     if (allBatchItems?.length) setBatchTransactions(allBatchItems);
 
     // The review queue deliberately contains only a summary projection.  Always
@@ -115,8 +115,11 @@ function DashboardContent() {
   }, [eventParam]);
 
   // Handle "View Proof" from Discrepancy Card
+  // Note: docTab parameter is for document type, but we now use document IDs as tabs
+  // The EvidenceViewer will handle finding the right document of that type
   const handleViewProof = (fieldName: string, docTab: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT") => {
-    setActiveDocTab(docTab);
+    // Leave activeDocTab empty - EvidenceViewer will auto-select the first document on load
+    // setActiveDocTab("");
     setSelectedField(fieldName);
   };
 

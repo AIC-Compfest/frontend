@@ -56,17 +56,17 @@ export function Sidebar({
         },
         {
           id: "QUEUE" as DashboardTab,
-          label: "Review Queue (Anomali)",
+          label: "Review Queue",
           icon: Inbox,
         },
         {
           id: "EXCEPTIONS" as DashboardTab,
-          label: "Arsip Anomali & Ditolak",
+          label: "Arsip Anomali",
           icon: ShieldAlert,
         },
         {
           id: "FINAL_APPROVAL" as DashboardTab,
-          label: "Final Approval (SoD)",
+          label: "Final Approval",
           icon: ShieldCheck,
         },
         // {

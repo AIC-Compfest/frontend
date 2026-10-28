@@ -38,7 +38,16 @@ export function DecisionModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  if (!isOpen || !action) return null;
+  if (!isOpen || !action || !event) return null;
+
+  // Defensive programming: Handle missing invoice/pricing data
+  const invoice = event.invoice || {};
+  const pricing = event.pricing || {};
+  const invoiceNumber = invoice?.invoice_number || "N/A";
+  const billedAmount = invoice?.billed_amount ?? 0;
+  const expectedAmount = pricing?.expected_total_charge ?? 0;
+  const differenceAmount = pricing?.difference_amount ?? 0;
+  const vendorId = event?.vendor_id || "N/A";
 
   const formatIDR = (val: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -121,27 +130,27 @@ export function DecisionModal({
           <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 font-sans">
             <div className="flex justify-between">
               <span className="text-slate-500">Nomor Faktur (Invoice):</span>
-              <span className="font-mono font-bold text-slate-900">{event.invoice.invoice_number}</span>
+              <span className="font-mono font-bold text-slate-900">{invoiceNumber}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Transporter / Vendor:</span>
-              <span className="font-semibold text-slate-800">{event.vendor_id}</span>
+              <span className="font-semibold text-slate-800">{vendorId}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Total Tagihan (Billed):</span>
-              <span className="font-mono font-bold text-slate-900">{formatIDR(event.invoice.billed_amount)}</span>
+              <span className="font-mono font-bold text-slate-900">{formatIDR(billedAmount)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Total Sah Terkontrak (Expected):</span>
               <span className="font-mono font-bold text-[#243A5E]">
-                {formatIDR(event.pricing.expected_total_charge)}
+                {formatIDR(expectedAmount)}
               </span>
             </div>
-            {event.pricing.difference_amount > 0 && (
+            {differenceAmount > 0 && (
               <div className="flex justify-between pt-2 border-t border-slate-200">
                 <span className="text-rose-700 font-bold">Selisih Klaim Sengketa:</span>
                 <span className="font-mono font-extrabold text-rose-700">
-                  +{formatIDR(event.pricing.difference_amount)}
+                  +{formatIDR(differenceAmount)}
                 </span>
               </div>
             )}
