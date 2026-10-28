@@ -98,68 +98,38 @@ export function MitraLogistikView() {
 
   return (
     <div className="space-y-6 font-sans max-w-7xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-[#1B2A4A] text-white flex items-center justify-center shadow-sm">
-              <Truck className="h-5 w-5" />
-            </div>
-            <h2 className="text-xl font-extrabold text-[#1B2A4A] tracking-tight">
-              Mitra Logistik
-            </h2>
-            <Badge variant="outline" className="text-[10px] font-mono text-slate-500 border-slate-200">
-              vendors • rate_agreements
-            </Badge>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Manajemen mitra 3PL terdaftar beserta kontrak PKS dan rate card yang digunakan dalam rekonsiliasi otomatis.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchData}
-          disabled={loading}
-          className="text-xs font-semibold gap-1.5 h-8 text-slate-700 cursor-pointer"
-        >
-          <RotateCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>Refresh Data</span>
-        </Button>
-      </div>
-
-      {/* Stats Banner */}
+      {/* Stats Banner - 3 White KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border border-[#1B2A4A]/20 bg-[#1B2A4A]/5 rounded-2xl shadow-2xs">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-[#1B2A4A] shrink-0" />
-            <div>
-              <div className="text-2xl font-extrabold text-[#1B2A4A]">{activeMitras.length}</div>
-              <div className="text-[11px] text-slate-600 font-medium">Mitra 3PL Aktif</div>
+        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
+          <CardHeader className="p-4 pb-2 space-y-1">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-slate-600" />
+              <span className="text-xs font-medium text-slate-600">Mitra 3PL Aktif</span>
             </div>
-          </CardContent>
+            <div className="text-2xl font-bold text-slate-900">{activeMitras.length}</div>
+          </CardHeader>
         </Card>
-        <Card className="border border-emerald-200 bg-emerald-50/40 rounded-2xl shadow-2xs">
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle2 className="h-8 w-8 text-emerald-600 shrink-0" />
-            <div>
-              <div className="text-2xl font-extrabold text-emerald-900">
-                {mitras.filter((m) => m.contract).length}
-              </div>
-              <div className="text-[11px] text-emerald-700 font-medium">PKS Terhubung</div>
+        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
+          <CardHeader className="p-4 pb-2 space-y-1">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-slate-600" />
+              <span className="text-xs font-medium text-slate-600">PKS Terhubung</span>
             </div>
-          </CardContent>
+            <div className="text-2xl font-bold text-slate-900">
+              {mitras.filter((m) => m.contract).length}
+            </div>
+          </CardHeader>
         </Card>
-        <Card className="border border-amber-200 bg-amber-50/40 rounded-2xl shadow-2xs">
-          <CardContent className="p-4 flex items-center gap-3">
-            <AlertCircle className="h-8 w-8 text-amber-600 shrink-0" />
-            <div>
-              <div className="text-2xl font-extrabold text-amber-900">
-                {mitras.filter((m) => !m.contract).length}
-              </div>
-              <div className="text-[11px] text-amber-700 font-medium">Tanpa Kontrak PKS</div>
+        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
+          <CardHeader className="p-4 pb-2 space-y-1">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-slate-600" />
+              <span className="text-xs font-medium text-slate-600">Tanpa Kontrak PKS</span>
             </div>
-          </CardContent>
+            <div className="text-2xl font-bold text-slate-900">
+              {mitras.filter((m) => !m.contract).length}
+            </div>
+          </CardHeader>
         </Card>
       </div>
 
