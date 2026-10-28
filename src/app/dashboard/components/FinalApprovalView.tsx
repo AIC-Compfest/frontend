@@ -148,12 +148,6 @@ export function FinalApprovalView({
 
   return (
     <div className="space-y-6 max-w-7xl font-sans">
-      {/* 1. Top Header - Simplified */}
-      <div className="space-y-2">
-        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Final Approval
-        </h2>
-      </div>
 
       {/* 2. Sub-Navigation Switcher */}
       <div className="flex flex-wrap items-center gap-3 border-b border-slate-200/80 pb-3">
@@ -270,27 +264,8 @@ export function FinalApprovalView({
                   <span>Mengambil data transaksi status=MATCH...</span>
                 </div>
               ) : items.length === 0 ? (
-                <div className="p-16 text-center space-y-3">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
-                    <CheckCheck className="h-6 w-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-extrabold text-slate-800">
-                      Semua Tagihan Terverifikasi Telah Disetujui
-                    </h4>
-                    <p className="text-xs text-slate-500 max-w-md mx-auto">
-                      Tidak ada tagihan yang sedang menunggu otorisasi final saat ini. Anda dapat melihat riwayat transaksi yang telah disetujui pada tab Riwayat Otorisasi.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setSodTab("HISTORY")}
-                    className="text-xs font-bold gap-1.5 h-8 bg-white border-slate-300 cursor-pointer"
-                  >
-                    <History className="h-3.5 w-3.5 text-sky-600" />
-                    <span>Lihat Riwayat Persetujuan (status=APPROVED)</span>
-                  </Button>
+                <div className="p-12 text-center text-xs text-slate-600">
+                  Tidak ada data
                 </div>
               ) : (
                 <div className="overflow-x-auto">

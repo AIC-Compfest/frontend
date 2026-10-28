@@ -67,26 +67,54 @@ export function OverviewView({
 
   const fetchSummary = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/reconcile/queue?page_size=1`);
-      if (!res.ok) return;
+      const url = `${API_BASE}/reconcile/queue?page_size=1`;
+      console.log("Fetching summary from:", url);
+      
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (!res.ok) {
+        console.error("Response not OK:", res.status, res.statusText);
+        return;
+      }
+      
       const data = await res.json();
+      console.log("Summary data received:", data);
+      
       if (data.summary) {
         setSummary(data.summary);
       }
-    } catch (err) {
-      console.error("Overview summary fetch error:", err);
+    } catch (err: any) {
+      console.error("Fetch summary error:", err?.message || err);
+      // Silently fail - use initial summary if fetch fails
     }
   }, []);
 
   const fetchVendors = useCallback(async () => {
     setVendorsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/vendors`);
-      if (!res.ok) throw new Error("Gagal fetch vendors");
+      const url = `${API_BASE}/vendors`;
+      console.log("Fetching vendors from:", url);
+      
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (!res.ok) {
+        console.error("Vendors response not OK:", res.status, res.statusText);
+        setVendors([]);
+        return;
+      }
+      
       const data = await res.json();
+      console.log("Vendors data received:", data);
+      
       setVendors(data.vendors || []);
-    } catch (err) {
-      console.error("Vendor fetch error:", err);
+    } catch (err: any) {
+      console.error("Vendor fetch error:", err?.message || err);
       setVendors([]);
     } finally {
       setVendorsLoading(false);

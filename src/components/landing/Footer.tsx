@@ -76,8 +76,7 @@ export function Footer() {
         </div>
         <div className="flex flex-col gap-3 border-t border-[#CDDBE8] py-6 text-xs text-[#7C879C] sm:flex-row sm:items-center sm:justify-between">
           <span>
-            © 2026 LogiRecon AI • Built for COMPFEST 18 AI Innovation Challenge
-            (Smart Logistics).
+            © 2026 Verflo
           </span>
           <span>Evidence, rules, and human review.</span>
         </div>

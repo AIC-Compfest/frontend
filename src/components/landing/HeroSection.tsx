@@ -15,7 +15,7 @@ export function HeroSection({ onLaunchApp }: HeroSectionProps) {
       <Image src="/polygon-symmetric.svg" alt="" width={539} height={539} className="hero-polygon hero-polygon-right" aria-hidden="true" />
       <div className="relative z-10 mx-auto grid max-w-[1440px] items-center gap-16 px-5 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,.95fr)] lg:px-12">
         <div className="max-w-4xl">
-          <h1 className="hero-reveal hero-reveal-delay-1 font-display max-w-5xl text-[clamp(2.5rem,4.8vw,5.5rem)] leading-[.92] tracking-tight text-[#12203A] text-balance">From disconnected documents to <span className="text-[#0077CC]">verified transactions.</span></h1>
+          <h1 className="hero-reveal hero-reveal-delay-1 font-display max-w-5xl text-[clamp(2.8rem,5.5vw,6.8rem)] leading-[.92] tracking-tight text-[#12203A] text-balance">From disconnected documents to <span className="text-[#0077CC]">verified transactions.</span></h1>
           <p className="hero-reveal hero-reveal-delay-2 mt-9 max-w-[58ch] text-lg leading-8 text-[#55637A] md:text-xl">Verflo gives instances working with third-party logistics finance teams one visual trail from billed amount to source document, contracted rate, and human decision.</p>
           <div className="hero-reveal hero-reveal-delay-3 mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button onClick={onLaunchApp} size="lg" className="group h-14 rounded-full bg-[#243A5E] px-7 text-white shadow-[0_18px_42px_rgba(36,58,94,.22)] transition-transform hover:-translate-y-1 hover:bg-[#174C84] active:translate-y-0">Open reviewer workspace <ArrowUpRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" /></Button>

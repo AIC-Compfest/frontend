@@ -30,7 +30,7 @@ export function BenchmarkMetrics() {
               The safety case is visible.
             </h2>
             <p className="mt-8 max-w-sm text-base leading-7 text-[#DCE8F5]">
-              Veriflow measures what matters to a finance reviewer: whether a
+              Verflo measures what matters to a finance reviewer: whether a
               decision is supported, reproducible, and safe to act on.
             </p>
             {/* <a
