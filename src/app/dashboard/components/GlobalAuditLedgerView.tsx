@@ -60,39 +60,6 @@ export function GlobalAuditLedgerView({ onSelectTransaction }: GlobalAuditLedger
 
   return (
     <div className="space-y-6 max-w-7xl font-sans">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-[#1B2A4A] text-white flex items-center justify-center shadow-sm">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <h2 className="text-xl font-extrabold text-[#1B2A4A] tracking-tight">
-              Immutable Audit Trail Ledger
-            </h2>
-            <Badge variant="outline" className="text-[10px] font-mono text-slate-500 border-slate-200">
-              Append-Only • Cryptographically Logged
-            </Badge>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Catatan permanen setiap keputusan persetujuan, penolakan, dan sengketa dari AP Manager dan Finance Controller.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchLogs}
-            disabled={loading}
-            className="text-xs font-semibold gap-1.5 h-8.5 bg-white border-slate-300 shadow-xs cursor-pointer"
-          >
-            <RotateCw className={`h-3.5 w-3.5 text-[#1B2A4A] ${loading ? "animate-spin" : ""}`} />
-            <span>Refresh Ledger</span>
-          </Button>
-        </div>
-      </div>
-
       {/* Filter Tabs */}
       <div className="flex items-center gap-2">
         {["ALL", "RELEASE", "APPROVE", "DISPUTE", "REJECT"].map((act) => (
