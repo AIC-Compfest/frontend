@@ -48,33 +48,6 @@ export function DisputeListView({ onSelectTransaction }: DisputeListViewProps) {
 
   return (
     <div className="space-y-6 max-w-7xl font-sans">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-extrabold text-[#243A5E] tracking-tight">
-              Official 3PL Dispute Packages
-            </h2>
-            <Badge variant="outline" className="text-[10px] font-mono text-slate-500">
-              status=EXCEPTION
-            </Badge>
-          </div>
-          <p className="text-xs text-slate-500">
-            Daftar paket sanggahan klaim overcharge yang dibuat dari kasus anomali yang telah ditinjau.
-          </p>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchDisputes}
-          disabled={isLoading}
-          className="text-xs font-semibold gap-1.5 h-8.5 bg-white border-slate-300 shadow-xs cursor-pointer"
-        >
-          <RotateCw className={`h-3.5 w-3.5 text-[#1B2A4A] ${isLoading ? "animate-spin" : ""}`} />
-          <span>Refresh Claims</span>
-        </Button>
-      </div>
-
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
         <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
           <span className="text-xs font-bold text-slate-700">
