@@ -117,8 +117,8 @@ export function Sidebar({
   return (
     <aside className="w-72 bg-[#E6EEF5] text-[#55637A] flex flex-col justify-between border-r border-[#CDDBE8] shrink-0 h-screen sticky top-0 font-sans select-none">
       {/* Brand Header */}
-      <div className="m-3 rounded-3xl border border-white/80 bg-white/75 p-4 shadow-[0_12px_30px_rgba(36,58,94,.08)]">
-        <Link href="/" className="flex items-center gap-2.5 group">
+      <div className="m-3 rounded-3xl border border-white/80 bg-white/75 p-4 shadow-[0_12px_30px_rgba(36,58,94,.08)] flex items-center justify-center">
+        <Link href="/" className="flex items-center justify-center group">
           <VeriflowLogo className="h-8 w-auto" />
         </Link>
       </div>
