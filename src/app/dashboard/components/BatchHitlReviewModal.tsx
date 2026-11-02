@@ -277,17 +277,91 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
           <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-800">{active.document.filename}</p><p className="text-[11px] text-slate-500">{labelFor(active)} · {active.predictions.length} field hasil ekstraksi</p>{hasMalformedScalar(active) && <p className="mt-1 text-[11px] font-medium text-amber-700">Mapping lama berisi nilai scalar yang tidak valid. Jalankan ulang AI sebelum menyetujui dokumen.</p>}{pending(active).some(isMissingPrediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Nilai kosong tidak akan disetujui otomatis; jalankan ulang AI atau isi koreksi pada field tersebut untuk menutup tab.</p>}</div><div className="flex gap-2">{(hasMalformedScalar(active) || pending(active).some(isMissingPrediction)) && <Button size="sm" variant="outline" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button>}<a href={`${API_V1}/documents/${active.document.id}/download`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md border border-sky-200 bg-white px-3 text-xs font-semibold text-sky-700 hover:bg-sky-50"><FileText className="h-3.5 w-3.5" />Lihat PDF/Gambar asli</a><Button size="sm" disabled={saving !== null || pending(active).length === 0} onClick={() => approveDocument(active)} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle2 />Setujui field tersedia</Button></div></div>
         </div>}
         
-        {/* SCROLLABLE CONTENT - Only predictions table scrolls */}
-        {active && <div className="flex-1 flex flex-col gap-0 overflow-hidden">
-          {visiblePredictions(active).length === 0 ? <div className="flex items-center justify-between gap-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800 m-5"><span>Belum ada mapping tersimpan. Jalankan ekstraksi ulang pada dokumen asli untuk membuat field dan confidence.</span><Button size="sm" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button></div> : <div className="flex-1 overflow-y-auto"><div className="m-5 rounded-xl border border-slate-200 bg-white"><table className="w-full min-w-[620px] text-left text-xs"><thead className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500 sticky top-0"><tr><th className="px-4 py-3">Field</th><th className="px-4 py-3">Nilai hasil mapping</th><th className="px-4 py-3">Confidence</th><th className="px-4 py-3 text-right">Aksi audit</th></tr></thead><tbody className="divide-y divide-slate-100">{visiblePredictions(active).map((prediction) => {
-            const decision = decisionFor(active, prediction.id); const isPending = decision?.decision_status === "PENDING_REVIEW"; const busy = saving === prediction.id;
-            const confidence = typeof prediction.score === "number" ? `${(prediction.score * 100).toFixed(1)}%` : "—";
-            const missingValue = isMissingPrediction(prediction);
-            const table = asTablePayload(prediction.predicted_value);
-            const valueText = displayValue(prediction.predicted_value, prediction.predicted_raw_text);
-            const sourceRawText = typeof prediction.decoder_metadata?.source_raw_text === "string" ? prediction.decoder_metadata.source_raw_text : prediction.predicted_raw_text;
-            return <tr key={prediction.id} className="align-top"><td className="px-4 py-3 font-bold text-slate-800">{prediction.field_name}</td><td className="px-4 py-3 text-slate-900">{table ? <TablePayloadView payload={table} /> : <p>{missingValue ? <span className="text-amber-700">Tidak ada kandidat — isi koreksi</span> : valueText}</p>}{sourceRawText && <details className="mt-1 text-[11px] text-slate-500"><summary>Cuplikan sumber</summary><p className="mt-1 whitespace-pre-wrap">{sourceRawText}</p></details>}{needsManualCheck(prediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Periksa manual</p>}{isPending && (table ? <textarea value={corrections[prediction.id] ?? JSON.stringify(table.rows.map((row) => row.cells ?? []), null, 2)} onChange={(event) => setCorrections((values) => ({ ...values, [prediction.id]: event.target.value }))} placeholder="Ketik baris JSON" className="mt-2 h-28 w-full rounded-md border border-slate-200 p-2 font-mono text-xs" /> : <input value={corrections[prediction.id] || ""} onChange={(event) => setCorrections((values) => ({ ...values, [prediction.id]: event.target.value }))} placeholder="Ketik nilai koreksi" className="mt-2 h-8 w-full rounded-md border border-slate-200 px-2 text-xs" />)}</td><td className="px-4 py-3 font-mono text-slate-700">{confidence}</td><td className="px-4 py-3 text-right">{isPending ? <div className="flex justify-end gap-2"><Button size="sm" disabled={busy || missingValue} title={missingValue ? "Nilai kosong harus dikoreksi, tidak dapat disetujui" : undefined} onClick={() => apply(active, prediction.id, "ACCEPT_PREDICTION")}>Terima</Button><Button size="sm" variant="outline" disabled={busy || !corrections[prediction.id]?.trim()} onClick={() => apply(active, prediction.id, "CORRECT_VALUE")}>Koreksi</Button></div> : <Badge variant="success">{decision?.decision_status || prediction.prediction_status}</Badge>}</td></tr>;
-          })}</tbody></table></div></div>}
+        {/* SCROLLABLE CONTENT - Table dengan scrollbar ONLY in table */}
+        {active && <div className="flex-1 flex flex-col gap-0 overflow-hidden min-h-0">
+          {visiblePredictions(active).length === 0 ? <div className="flex items-center justify-between gap-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800 m-5"><span>Belum ada mapping tersimpan. Jalankan ekstraksi ulang pada dokumen asli untuk membuat field dan confidence.</span><Button size="sm" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button></div> : <div className="flex-1 overflow-y-auto overflow-x-hidden border border-slate-200 rounded-lg bg-white min-h-0 m-5">
+            <table className="w-full text-left text-xs border-collapse table-layout-fixed">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500 sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3 w-32 flex-shrink-0">Field</th>
+                  <th className="px-4 py-3 flex-1 flex-shrink-0">Nilai hasil mapping</th>
+                  <th className="px-4 py-3 w-20 flex-shrink-0">Confidence</th>
+                  <th className="px-4 py-3 w-32 flex-shrink-0 text-right">Aksi audit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {visiblePredictions(active).map((prediction) => {
+                  const decision = decisionFor(active, prediction.id);
+                  const isPending = decision?.decision_status === "PENDING_REVIEW";
+                  const busy = saving === prediction.id;
+                  const confidence = typeof prediction.score === "number" ? `${(prediction.score * 100).toFixed(1)}%` : "—";
+                  const missingValue = isMissingPrediction(prediction);
+                  const table = asTablePayload(prediction.predicted_value);
+                  const valueText = displayValue(prediction.predicted_value, prediction.predicted_raw_text);
+                  const sourceRawText = typeof prediction.decoder_metadata?.source_raw_text === "string" ? prediction.decoder_metadata.source_raw_text : prediction.predicted_raw_text;
+                  
+                  return (
+                    <tr key={prediction.id} className="align-top hover:bg-slate-50">
+                      <td className="px-4 py-3 font-bold text-slate-800 w-32 flex-shrink-0 border-r border-slate-100 align-top">{prediction.field_name}</td>
+                      <td className="px-4 py-3 text-slate-900 flex-1 border-r border-slate-100 align-top">
+                        <div className="max-h-96 overflow-y-auto overflow-x-hidden">
+                          <div className="space-y-2">
+                            {table ? <div className="overflow-x-auto"><TablePayloadView payload={table} /></div> : <p>{missingValue ? <span className="text-amber-700">Tidak ada kandidat — isi koreksi</span> : valueText}</p>}
+                            {sourceRawText && <details className="text-[11px] text-slate-500"><summary>Cuplikan sumber</summary><p className="mt-1 whitespace-pre-wrap text-[10px]">{sourceRawText}</p></details>}
+                            {needsManualCheck(prediction) && <p className="text-[11px] font-medium text-amber-700">Periksa manual</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-slate-700 w-20 flex-shrink-0 border-r border-slate-100 align-top">{confidence}</td>
+                      <td className="px-4 py-3 w-32 flex-shrink-0 align-top">
+                        {isPending ? (
+                          <div className="space-y-2">
+                            {table ? (
+                              <textarea
+                                value={corrections[prediction.id] ?? JSON.stringify(table.rows.map((row) => row.cells ?? []), null, 2)}
+                                onChange={(event) => setCorrections((values) => ({ ...values, [prediction.id]: event.target.value }))}
+                                placeholder="Ketik baris JSON"
+                                className="h-20 w-full rounded-md border border-slate-200 p-2 font-mono text-xs"
+                              />
+                            ) : (
+                              <input
+                                value={corrections[prediction.id] || ""}
+                                onChange={(event) => setCorrections((values) => ({ ...values, [prediction.id]: event.target.value }))}
+                                placeholder="Ketik nilai koreksi"
+                                className="h-8 w-full rounded-md border border-slate-200 px-2 text-xs"
+                              />
+                            )}
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                className="text-xs py-1 h-7"
+                                disabled={busy || missingValue}
+                                title={missingValue ? "Nilai kosong harus dikoreksi, tidak dapat disetujui" : undefined}
+                                onClick={() => apply(active, prediction.id, "ACCEPT_PREDICTION")}
+                              >
+                                Terima
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs py-1 h-7"
+                                disabled={busy || !corrections[prediction.id]?.trim()}
+                                onClick={() => apply(active, prediction.id, "CORRECT_VALUE")}
+                              >
+                                Koreksi
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Badge variant="success" className="text-xs">{decision?.decision_status || prediction.prediction_status}</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>}
         </div>}
       </>}
       
