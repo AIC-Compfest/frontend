@@ -38,7 +38,7 @@ export function Footer() {
           <div>
             <VeriflowLogo />
             <p className="mt-5 max-w-sm text-sm leading-6 text-[#55637A]">
-              Evidence-led reconciliation for 3PL finance and operations teams.
+              Evidence-led reconciliation for finance and operations teams.
             </p>
           </div>
           <div>

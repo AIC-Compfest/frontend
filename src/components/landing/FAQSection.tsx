@@ -11,8 +11,8 @@ export function FAQSection() {
       "Verflo separates document understanding from financial decisions. Extraction supports review, while contract matching, tolerance checks, and reconciliation outcomes remain traceable and reproducible.",
     ],
     [
-      "Do 3PL vendors need to install software?",
-      "No. Vendors can continue submitting their existing PDF invoices, waybills, and POD photos. Your team reviews the connected evidence inside Verflo.",
+      "Do company need to install software?",
+      "No. Company can continue submitting their existing PDF invoices, waybills, and POD photos. Your team reviews the connected evidence inside Verflo.",
     ],
     [
       "What happens when a document is blurry or incomplete?",
