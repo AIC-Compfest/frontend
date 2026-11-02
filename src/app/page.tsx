@@ -47,7 +47,7 @@ export default function Home() {
       <InteractiveSimulator onLaunchApp={handleLaunchDashboard} />
 
       {/* Competition Verified Benchmark Metrics */}
-      <BenchmarkMetrics />
+      {/* <BenchmarkMetrics /> */}
 
       {/* Transparent SaaS Pricing Plans */}
       {/* <PricingSection onLaunchApp={handleLaunchDashboard} /> */}

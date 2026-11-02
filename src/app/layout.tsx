@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Veriflow | Evidence-led 3PL reconciliation",
+  title: "Verflo | Evidence-led 3PL reconciliation",
   description:
-    "Veriflow helps 3PL finance and operations teams reconcile invoices against shipment evidence and contracted rates.",
+    "Verflo gives instances working with third-party logistics finance teams one visual trail from billed amount to source document, contracted rate, and human decision.",
   keywords: [
     "3PL",
     "Invoice Reconciliation",
-    "Veriflow",
+    "Verflo",
     "3PL reconciliation",
     "invoice audit",
     "shipment evidence",

@@ -69,9 +69,9 @@ export function FeaturesSection() {
             <p className="mt-2 text-sm leading-6 text-[#55637A]">
               Rates, surcharges, tax, and tolerance checks stay reproducible.
             </p>
-            <span className="absolute bottom-8 right-8 text-4xl font-bold text-[#E6EEF5]">
+            {/* <span className="absolute bottom-8 right-8 text-4xl font-bold text-[#E6EEF5]">
               01
-            </span>
+            </span> */}
           </article>
           <article className="group relative min-h-[218px] overflow-hidden rounded-[2rem] bg-[#DFF5F4] p-8 md:col-span-4 md:p-9">
             <PenTool className="h-7 w-7 text-[#007A78]" />
@@ -81,9 +81,9 @@ export function FeaturesSection() {
             <p className="mt-2 text-sm leading-6 text-[#366C6B]">
               The system prioritizes uncertainty. Your reviewer makes the call.
             </p>
-            <span className="absolute bottom-8 right-8 text-4xl font-bold text-white/80">
+            {/* <span className="absolute bottom-8 right-8 text-4xl font-bold text-white/80">
               02
-            </span>
+            </span> */}
           </article>
           <article className="group relative min-h-[218px] overflow-hidden rounded-[2rem] border border-[#CDDBE8] bg-[#E6EEF5] p-8 md:col-span-12 md:p-9">
             <FileCheck2 className="h-7 w-7 text-[#174C84]" />
@@ -94,9 +94,9 @@ export function FeaturesSection() {
               Turn a confirmed overcharge into an evidence-backed dispute
               package.
             </p>
-            <span className="absolute bottom-8 right-8 text-4xl font-bold text-white/90">
+            {/* <span className="absolute bottom-8 right-8 text-4xl font-bold text-white/90">
               03
-            </span>
+            </span> */}
           </article>
         </div>
       </div>
