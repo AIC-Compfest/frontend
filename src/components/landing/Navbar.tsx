@@ -16,7 +16,7 @@ export function Navbar({ onLaunchApp, className }: NavbarProps) {
   const links = [
     ["Features", "#features"],
     ["How it Works", "#how-it-works"],
-    ["Benchmark & Proof", "#benchmarks"],
+    ["Interactive Demo", "#interactive-demo"],
     ["FAQ", "#faq"],
   ];
   return (
