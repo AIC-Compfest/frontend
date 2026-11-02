@@ -256,19 +256,29 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
 
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-label="Audit HITL batch">
     <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-      <div className="flex items-start justify-between border-b border-slate-200 p-5">
+      {/* HEADER - Fixed */}
+      <div className="flex-shrink-0 flex items-start justify-between border-b border-slate-200 p-5">
         <div><h2 className="flex items-center gap-2 text-base font-bold text-[#1B2A4A]"><ShieldCheck className="h-5 w-5 text-sky-600" />Audit mapping dokumen</h2><p className="mt-1 text-xs text-slate-500">Setujui atau koreksi setiap mapping. Semua tab harus selesai sebelum audit batch dapat ditutup.</p></div>
         <Badge variant={allApproved ? "success" : "warning"}>{allApproved ? "Semua disetujui" : `${profiles.filter((p) => pending(p).length > 0).length} tab belum selesai`}</Badge>
       </div>
+      
       {loading ? <div className="p-16 text-center text-sm text-slate-500"><Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin" />Memuat hasil ekstraksi...</div> : error && !active ? <div className="m-5 rounded-lg bg-rose-50 p-4 text-sm text-rose-700"><AlertCircle className="mr-2 inline h-4 w-4" />{error}</div> : <>
-        <div className="flex gap-2 overflow-x-auto border-b border-slate-100 px-5 pt-3">
-          {profiles.map((profile) => <button key={profile.document.id} onClick={() => setActiveId(profile.document.id)} className={`border-b-2 px-3 pb-3 text-xs font-bold ${activeId === profile.document.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500"}`}>
+        
+        {/* TABS - Fixed */}
+        <div className="flex-shrink-0 flex gap-2 overflow-x-auto border-b border-slate-100 px-5 pt-3">
+          {profiles.map((profile) => <button key={profile.document.id} onClick={() => setActiveId(profile.document.id)} className={`border-b-2 px-3 pb-3 text-xs font-bold whitespace-nowrap ${activeId === profile.document.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500"}`}>
             {labelFor(profile)}{profiles.filter((candidate) => labelFor(candidate) === labelFor(profile)).length > 1 ? ` · ${profile.document.filename}` : ""} {pending(profile).length > 0 ? `(${pending(profile).length})` : "✓"}
           </button>)}
         </div>
-        {active && <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        
+        {/* DOCUMENT INFO - Fixed */}
+        {active && <div className="flex-shrink-0 border-b border-slate-100 bg-slate-50 p-5">
           {error && <div className="mb-3 rounded-lg bg-rose-50 p-3 text-xs text-rose-700"><AlertCircle className="mr-1 inline h-3.5 w-3.5" />{error}</div>}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-800">{active.document.filename}</p><p className="text-[11px] text-slate-500">{labelFor(active)} · {active.predictions.length} field hasil ekstraksi</p>{hasMalformedScalar(active) && <p className="mt-1 text-[11px] font-medium text-amber-700">Mapping lama berisi nilai scalar yang tidak valid. Jalankan ulang AI sebelum menyetujui dokumen.</p>}{pending(active).some(isMissingPrediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Nilai kosong tidak akan disetujui otomatis; jalankan ulang AI atau isi koreksi pada field tersebut untuk menutup tab.</p>}</div><div className="flex gap-2">{(hasMalformedScalar(active) || pending(active).some(isMissingPrediction)) && <Button size="sm" variant="outline" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button>}<a href={`${API_V1}/documents/${active.document.id}/download`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md border border-sky-200 bg-white px-3 text-xs font-semibold text-sky-700 hover:bg-sky-50"><FileText className="h-3.5 w-3.5" />Lihat PDF/Gambar asli</a><Button size="sm" disabled={saving !== null || pending(active).length === 0} onClick={() => approveDocument(active)} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle2 />Setujui field tersedia</Button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-800">{active.document.filename}</p><p className="text-[11px] text-slate-500">{labelFor(active)} · {active.predictions.length} field hasil ekstraksi</p>{hasMalformedScalar(active) && <p className="mt-1 text-[11px] font-medium text-amber-700">Mapping lama berisi nilai scalar yang tidak valid. Jalankan ulang AI sebelum menyetujui dokumen.</p>}{pending(active).some(isMissingPrediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Nilai kosong tidak akan disetujui otomatis; jalankan ulang AI atau isi koreksi pada field tersebut untuk menutup tab.</p>}</div><div className="flex gap-2">{(hasMalformedScalar(active) || pending(active).some(isMissingPrediction)) && <Button size="sm" variant="outline" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button>}<a href={`${API_V1}/documents/${active.document.id}/download`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md border border-sky-200 bg-white px-3 text-xs font-semibold text-sky-700 hover:bg-sky-50"><FileText className="h-3.5 w-3.5" />Lihat PDF/Gambar asli</a><Button size="sm" disabled={saving !== null || pending(active).length === 0} onClick={() => approveDocument(active)} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle2 />Setujui field tersedia</Button></div></div>
+        </div>}
+        
+        {/* SCROLLABLE CONTENT - Only predictions table scrolls */}
+        {active && <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {visiblePredictions(active).length === 0 ? <div className="flex items-center justify-between gap-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800"><span>Belum ada mapping tersimpan. Jalankan ekstraksi ulang pada dokumen asli untuk membuat field dan confidence.</span><Button size="sm" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button></div> : <div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full min-w-[620px] text-left text-xs"><thead className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Field</th><th className="px-4 py-3">Nilai hasil mapping</th><th className="px-4 py-3">Confidence</th><th className="px-4 py-3 text-right">Aksi audit</th></tr></thead><tbody className="divide-y divide-slate-100">{visiblePredictions(active).map((prediction) => {
             const decision = decisionFor(active, prediction.id); const isPending = decision?.decision_status === "PENDING_REVIEW"; const busy = saving === prediction.id;
             const confidence = typeof prediction.score === "number" ? `${(prediction.score * 100).toFixed(1)}%` : "—";
@@ -280,7 +290,9 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
           })}</tbody></table></div>}
         </div>}
       </>}
-      <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4">
+      
+      {/* FOOTER - Fixed at bottom, NOT scrolling */}
+      <div className="flex-shrink-0 flex justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4">
         <div className="flex-1">
           {!allApproved && profiles.length > 0 && (
             <div className="text-xs text-slate-600 space-y-1">
