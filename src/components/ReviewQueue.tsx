@@ -204,94 +204,59 @@ export function ReviewQueue({
       {/* 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Invoiced Spend */}
-        <Card className="border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all bg-white rounded-2xl">
-          <CardHeader className="p-4 pb-1 space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Total Invoiced Spend
-            </span>
-            <CardTitle className="text-xl font-extrabold text-slate-900 tracking-tight font-tabular">
+        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
+          <CardHeader className="p-4 pb-2 space-y-1">
+            <span className="text-xs font-medium text-slate-600">Total Invoiced Spend</span>
+            <CardTitle className="text-base font-bold text-slate-900">
               {isLoading ? (
-                <div className="h-7 w-28 bg-slate-200 animate-pulse rounded" />
+                <div className="h-6 w-32 bg-slate-200 animate-pulse rounded" />
               ) : (
                 formatCompactIDR(summary.total_invoiced_amount)
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-slate-500 flex items-center gap-1.5">
-            <DollarSign className="h-3.5 w-3.5 text-[#243A5E]" />
-            <span>Dari {summary.total_invoices_count} total tagihan di-audit</span>
-          </CardContent>
         </Card>
 
         {/* Card 2: Potensi Kebocoran (Overcharge) */}
-        <Card className="border border-rose-200/80 bg-rose-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
-          <CardHeader className="p-4 pb-1 space-y-0.5">
-            <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
-              <span>Potensi Kebocoran (Overcharge)</span>
-              <TrendingDown className="h-3.5 w-3.5 text-rose-600" />
-            </span>
-            <CardTitle className="text-xl font-extrabold text-rose-950 tracking-tight font-tabular">
+        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
+          <CardHeader className="p-4 pb-2 space-y-1">
+            <span className="text-xs font-medium text-slate-600">Potensi Kebocoran</span>
+            <CardTitle className="text-base font-bold text-slate-900">
               {isLoading ? (
-                <div className="h-7 w-28 bg-rose-200 animate-pulse rounded" />
+                <div className="h-6 w-32 bg-slate-200 animate-pulse rounded" />
               ) : (
                 `+${formatCompactIDR(summary.total_variance_amount)}`
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-rose-700">
-            <span>Total selisih tarif dari kontrak PKS</span>
-          </CardContent>
         </Card>
 
         {/* Card 3: Antrean Anomali Aktif */}
-        <Card className="border border-amber-200/80 bg-amber-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
-          <CardHeader className="p-4 pb-1 space-y-0.5">
-            <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
-              <span>Antrean Anomali Aktif</span>
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-            </span>
-            <CardTitle className="text-xl font-extrabold text-amber-950 tracking-tight font-tabular">
+        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
+          <CardHeader className="p-4 pb-2 space-y-1">
+            <span className="text-xs font-medium text-slate-600">Antrean Anomali</span>
+            <CardTitle className="text-base font-bold text-slate-900">
               {isLoading ? (
-                <div className="h-7 w-20 bg-amber-200 animate-pulse rounded" />
+                <div className="h-6 w-20 bg-slate-200 animate-pulse rounded" />
               ) : (
-                `${summary.open_exceptions_count} Kasus`
+                `${summary.open_exceptions_count}`
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-amber-700 flex items-center gap-1">
-            <Clock className="h-3 w-3 text-amber-600" />
-            <span>{summary.urgent_disputes_count} kasus sisa waktu ≤ 7 hari</span>
-          </CardContent>
         </Card>
 
         {/* Card 4: Clean Matches / Siap Bayar */}
-        <Card className="border border-emerald-200/80 bg-emerald-50/40 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
-          <CardHeader className="p-4 pb-1 space-y-0.5">
-            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
-              <span>Clean Matches / Siap Bayar</span>
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-            </span>
-            <CardTitle className="text-xl font-extrabold text-emerald-950 tracking-tight font-tabular">
+        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
+          <CardHeader className="p-4 pb-2 space-y-1">
+            <span className="text-xs font-medium text-slate-600">Clean Matches</span>
+            <CardTitle className="text-base font-bold text-slate-900">
               {isLoading ? (
-                <div className="h-7 w-20 bg-emerald-200 animate-pulse rounded" />
+                <div className="h-6 w-20 bg-slate-200 animate-pulse rounded" />
               ) : (
-                `${summary.matches_count} Tagihan`
+                `${summary.matches_count}`
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-emerald-700 flex items-center justify-between">
-            <span>100% cocok dengan tarif &amp; bukti POD</span>
-            {onNavigateToFinalApproval && summary.matches_count > 0 && (
-              <button
-                type="button"
-                onClick={onNavigateToFinalApproval}
-                className="text-[11px] font-bold text-emerald-800 hover:underline cursor-pointer flex items-center gap-0.5"
-              >
-                <span>Final Approval</span>
-                <ArrowRight className="h-3 w-3" />
-              </button>
-            )}
-          </CardContent>
         </Card>
       </div>
 
@@ -318,7 +283,7 @@ export function ReviewQueue({
               onChange={(e) => setStatusFilter(e.target.value)}
               className="h-8.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 cursor-pointer"
             >
-              <option value="ANOMALI">⚠️ Anomali (Default)</option>
+              <option value="ANOMALI">Anomali</option>
               <option value="ALL">Semua Status</option>
               <option value="EXCEPTION">Exception</option>
               <option value="DUPLICATE">Duplicate</option>
@@ -366,17 +331,6 @@ export function ReviewQueue({
             </Button>
           </div>
         </CardHeader>
-
-        {/* Info Banner */}
-        {statusFilter === "ANOMALI" && (
-          <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-[11px] text-amber-800 flex items-center gap-2">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            <span>
-              Menampilkan folder berkas transaksi anomali (EXCEPTION, DUPLICATE, INSUFFICIENT_EVIDENCE).
-              Transaksi MATCH langsung masuk ke <strong>Final Approval</strong>.
-            </span>
-          </div>
-        )}
 
         {/* Content: Folder Cards Only (No Dropdown, No Per-File Rows) */}
         <CardContent className="p-0">
@@ -427,61 +381,36 @@ export function ReviewQueue({
                 return (
                   <div
                     key={folder.id}
-                    className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white hover:bg-slate-50/70 transition-colors"
+                    className="p-4 flex items-center justify-between gap-4 bg-white border-b border-slate-100 hover:bg-slate-50 transition-colors"
                   >
-                    {/* Folder Info */}
-                    <div className="flex items-start sm:items-center gap-3.5">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center shrink-0 shadow-2xs">
-                        <Folder className="h-6 w-6 text-amber-500" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-extrabold text-sm text-slate-900">{folder.label}</span>
-                          <Badge
-                            variant="outline"
-                            className="text-[11px] font-semibold border-slate-300 text-slate-600"
-                          >
-                            {folder.items.length} transaksi
-                          </Badge>
-                          {anomalyCount > 0 && (
-                            <Badge className="text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                              {anomalyCount} anomali
-                            </Badge>
-                          )}
-                        </div>
+                    {/* Folder Icon */}
+                    <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                      <Folder className="h-5 w-5 text-white" />
+                    </div>
 
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-500">
-                          <span>
-                            Total Tagihan:{" "}
-                            <strong className="text-slate-800 font-mono">
-                              {formatIDR(folder.totalBilled)}
-                            </strong>
-                          </span>
-                          <span>•</span>
-                          <span>
-                            Potensi Selisih:{" "}
-                            <strong className="text-rose-700 font-mono">
-                              +{formatIDR(folder.totalVariance)}
-                            </strong>
-                          </span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            Risiko Tertinggi: {renderSeverityBadge(folder.highestSeverity)}
-                          </span>
-                        </div>
+                    {/* Folder Info */}
+                    <div className="space-y-1.5 flex-1">
+                      <div className="font-bold text-sm text-slate-900">{folder.label}</div>
+                      <div className="flex items-center gap-3 text-xs text-slate-600">
+                        <span>
+                          Tagihan: <span className="font-semibold text-slate-900">{formatIDR(folder.totalBilled)}</span>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Selisih: <span className="font-semibold text-rose-700">+{formatIDR(folder.totalVariance)}</span>
+                        </span>
                       </div>
                     </div>
 
-                    {/* Action Button: Lihat Detail */}
+                    {/* Action Button */}
                     {firstItem && (
                       <Button
                         size="sm"
                         onClick={() => onSelectTransaction(firstItem.event_id, folder.items)}
-                        className="h-9 px-4 text-xs font-bold bg-[#243A5E] hover:bg-[#1B2A4A] text-white gap-2 shadow-xs cursor-pointer transition-all shrink-0 ml-auto md:ml-0"
-                        title="Buka Lembar Kerja Seluruh Transaksi Batch"
+                        className="h-8 px-4 text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 gap-2 shrink-0"
                       >
                         <span>Lihat Detail</span>
-                        <ArrowRight className="h-4 w-4" />
+                        <ArrowRight className="h-3.5 w-3.5" />
                       </Button>
                     )}
                   </div>

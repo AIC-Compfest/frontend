@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DocumentProfile, finalizeDocumentBatch, getDocumentProfile, reprocessDocument, reviewDocumentField } from "@/lib/api";
@@ -9,6 +9,7 @@ import { getStoredUser } from "@/lib/auth";
 import { FIELD_REGISTRY, type DocumentType } from "@/lib/field_registry.gen";
 import { asTablePayload, displayValue, hasSuggestion, needsManualCheck } from "@/lib/review";
 import { TablePayloadView } from "./TablePayloadView";
+import { API_V1 } from "@/lib/config";
 
 interface Props {
   documentIds: string[];
@@ -65,7 +66,40 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
       .sort((a, b) => order.get(a.field_name)! - order.get(b.field_name)!);
   };
   const allApproved = useMemo(
-    () => profiles.length > 0 && profiles.every((profile) => profile.predictions.length > 0 && pending(profile).length === 0 && !hasMalformedScalar(profile)),
+    () => {
+      if (profiles.length === 0) return false;
+      
+      // Each profile must:
+      // 1. Have predictions
+      // 2. Have NO pending items
+      // 3. Have NO malformed scalars
+      // 4. Have a resolved document type
+      // 5. Have at least one visible prediction approved
+      
+      return profiles.every((profile) => {
+        // Must have predictions
+        if (profile.predictions.length === 0) return false;
+        
+        // Must have NO pending items
+        if (pending(profile).length > 0) return false;
+        
+        // Must NOT have malformed scalars
+        if (hasMalformedScalar(profile)) return false;
+        
+        // Must have a resolved document type
+        const docType = profile.segments[0]?.document_type || profile.document.classification;
+        if (!docType || docType === "UNKNOWN") return false;
+        
+        // Must have at least one visible prediction that was approved or corrected
+        const hasApprovedOrCorrected = profile.predictions.some((pred) => {
+          if (pred.registry_visible === false) return false;
+          const decision = profile.decisions.find((d) => d.prediction_id === pred.id);
+          return decision && (decision.decision_status === "APPROVED" || decision.decision_status === "CORRECTED");
+        });
+        
+        return hasApprovedOrCorrected;
+      });
+    },
     [profiles]
   );
 
@@ -112,17 +146,94 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
 
   const finalize = async () => {
     const batchId = profiles[0]?.document.ingest_batch_id;
-    if (!batchId || profiles.some((profile) => profile.document.ingest_batch_id !== batchId)) {
-      setError("Dokumen audit harus berasal dari satu batch upload yang sama.");
+    if (!batchId) {
+      setError("Batch ID tidak ditemukan. Silakan pilih dokumen dari batch yang valid.");
       return;
     }
+    
+    // Validate all documents meet finalization requirements
+    const validationErrors: string[] = [];
+    const validationLogs: string[] = [];
+    
+    console.log(`[FINALIZE] Starting batch validation for batch ID: ${batchId}`);
+    console.log(`[FINALIZE] Documents to validate: ${profiles.length}`);
+    
+    profiles.forEach((profile, index) => {
+      const docNum = index + 1;
+      const filename = profile.document.filename;
+      
+      console.log(`[FINALIZE] Document ${docNum}: ${filename}`);
+      
+      if (profile.predictions.length === 0) {
+        const msg = `Dokumen ${docNum} (${filename}): Belum ada ekstraksi field`;
+        validationErrors.push(msg);
+        validationLogs.push(`  ✗ ${msg}`);
+      } else {
+        console.log(`  ✓ Predictions: ${profile.predictions.length}`);
+      }
+      
+      const pendingCount = pending(profile).length;
+      if (pendingCount > 0) {
+        const msg = `Dokumen ${docNum} (${filename}): ${pendingCount} field masih belum disetujui`;
+        validationErrors.push(msg);
+        validationLogs.push(`  ✗ ${msg}`);
+      } else {
+        console.log(`  ✓ All predictions decided`);
+      }
+      
+      if (hasMalformedScalar(profile)) {
+        const msg = `Dokumen ${docNum} (${filename}): Nilai field tidak valid, jalankan ulang AI`;
+        validationErrors.push(msg);
+        validationLogs.push(`  ✗ ${msg}`);
+      } else {
+        console.log(`  ✓ No malformed scalars`);
+      }
+      
+      const docType = profile.segments[0]?.document_type || profile.document.classification;
+      if (!docType || docType === "UNKNOWN") {
+        const msg = `Dokumen ${docNum} (${filename}): Tipe dokumen tidak teridentifikasi`;
+        validationErrors.push(msg);
+        validationLogs.push(`  ✗ ${msg}`);
+      } else {
+        console.log(`  ✓ Document type: ${docType}`);
+      }
+      
+      const hasApprovedOrCorrected = profile.predictions.some((pred) => {
+        if (pred.registry_visible === false) return false;
+        const decision = profile.decisions.find((d) => d.prediction_id === pred.id);
+        return decision && (decision.decision_status === "APPROVED" || decision.decision_status === "CORRECTED");
+      });
+      
+      if (!hasApprovedOrCorrected) {
+        const msg = `Dokumen ${docNum} (${filename}): Tidak ada field yang disetujui`;
+        validationErrors.push(msg);
+        validationLogs.push(`  ✗ ${msg}`);
+      } else {
+        console.log(`  ✓ Has approved/corrected fields`);
+      }
+    });
+    
+    if (validationErrors.length > 0) {
+      console.log(`[FINALIZE] Validation failed with ${validationErrors.length} error(s)`);
+      validationLogs.forEach(log => console.log(log));
+      setError(`Finalisasi tidak dapat dilakukan:\n${validationErrors.join("\n")}`);
+      return;
+    }
+    
+    console.log(`[FINALIZE] All validations passed, proceeding to finalize batch...`);
+    
     setFinalizing(true);
     setError(null);
     try {
+      console.log(`[FINALIZE] Calling finalizeDocumentBatch(${batchId})`);
       const event = await finalizeDocumentBatch(batchId);
+      console.log(`[FINALIZE] Success! Event ID: ${event.event_id}`);
+      console.log(`[FINALIZE] Reconciliation status: ${event.reconciliation?.status}`);
       onFinalized(event.event_id);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Finalisasi rekonsiliasi gagal");
+      const errorMsg = reason instanceof Error ? reason.message : "Finalisasi rekonsiliasi gagal";
+      console.error(`[FINALIZE] Error:`, errorMsg);
+      setError(errorMsg || "Finalisasi rekonsiliasi gagal");
     } finally {
       setFinalizing(false);
     }
@@ -157,7 +268,7 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
         </div>
         {active && <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {error && <div className="mb-3 rounded-lg bg-rose-50 p-3 text-xs text-rose-700"><AlertCircle className="mr-1 inline h-3.5 w-3.5" />{error}</div>}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-800">{active.document.filename}</p><p className="text-[11px] text-slate-500">{labelFor(active)} · {active.predictions.length} field hasil ekstraksi</p>{hasMalformedScalar(active) && <p className="mt-1 text-[11px] font-medium text-amber-700">Mapping lama berisi nilai scalar yang tidak valid. Jalankan ulang AI sebelum menyetujui dokumen.</p>}{pending(active).some(isMissingPrediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Field yang belum ditemukan harus dikoreksi sebelum seluruh dokumen dapat disetujui.</p>}</div><div className="flex gap-2">{hasMalformedScalar(active) && <Button size="sm" variant="outline" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button>}<Button size="sm" disabled={saving !== null || pending(active).length === 0 || pending(active).some(isMissingPrediction)} onClick={() => approveDocument(active)} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle2 />Setujui semua field tab ini</Button></div></div>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-800">{active.document.filename}</p><p className="text-[11px] text-slate-500">{labelFor(active)} · {active.predictions.length} field hasil ekstraksi</p>{hasMalformedScalar(active) && <p className="mt-1 text-[11px] font-medium text-amber-700">Mapping lama berisi nilai scalar yang tidak valid. Jalankan ulang AI sebelum menyetujui dokumen.</p>}{pending(active).some(isMissingPrediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Nilai kosong tidak akan disetujui otomatis; jalankan ulang AI atau isi koreksi pada field tersebut untuk menutup tab.</p>}</div><div className="flex gap-2">{(hasMalformedScalar(active) || pending(active).some(isMissingPrediction)) && <Button size="sm" variant="outline" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button>}<a href={`${API_V1}/documents/${active.document.id}/download`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md border border-sky-200 bg-white px-3 text-xs font-semibold text-sky-700 hover:bg-sky-50"><FileText className="h-3.5 w-3.5" />Lihat PDF/Gambar asli</a><Button size="sm" disabled={saving !== null || pending(active).length === 0} onClick={() => approveDocument(active)} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle2 />Setujui field tersedia</Button></div></div>
           {visiblePredictions(active).length === 0 ? <div className="flex items-center justify-between gap-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800"><span>Belum ada mapping tersimpan. Jalankan ekstraksi ulang pada dokumen asli untuk membuat field dan confidence.</span><Button size="sm" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button></div> : <div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full min-w-[620px] text-left text-xs"><thead className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Field</th><th className="px-4 py-3">Nilai hasil mapping</th><th className="px-4 py-3">Confidence</th><th className="px-4 py-3 text-right">Aksi audit</th></tr></thead><tbody className="divide-y divide-slate-100">{visiblePredictions(active).map((prediction) => {
             const decision = decisionFor(active, prediction.id); const isPending = decision?.decision_status === "PENDING_REVIEW"; const busy = saving === prediction.id;
             const confidence = typeof prediction.score === "number" ? `${(prediction.score * 100).toFixed(1)}%` : "—";
@@ -169,7 +280,51 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
           })}</tbody></table></div>}
         </div>}
       </>}
-      <div className="flex justify-end gap-2 border-t border-slate-200 p-4"><Button variant="outline" onClick={onClose}>Simpan & lanjutkan nanti</Button><Button disabled={!allApproved || finalizing} onClick={finalize}>{finalizing ? <><Loader2 className="animate-spin" />Menjalankan validasi...</> : "Finalisasi & buka review query"}</Button></div>
+      <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4">
+        <div className="flex-1">
+          {!allApproved && profiles.length > 0 && (
+            <div className="text-xs text-slate-600 space-y-1">
+              <p className="font-semibold text-slate-700">Validasi Finalisasi:</p>
+              {profiles.map((profile, idx) => {
+                const docNum = idx + 1;
+                const pendingCount = pending(profile).length;
+                const hasMalformed = hasMalformedScalar(profile);
+                const docType = profile.segments[0]?.document_type || profile.document.classification;
+                const isTypeValid = docType && docType !== "UNKNOWN";
+                const hasApproved = profile.predictions.some((pred) => {
+                  if (pred.registry_visible === false) return false;
+                  const decision = profile.decisions.find((d) => d.prediction_id === pred.id);
+                  return decision && (decision.decision_status === "APPROVED" || decision.decision_status === "CORRECTED");
+                });
+                
+                const issues = [];
+                if (profile.predictions.length === 0) issues.push("Belum ada ekstraksi");
+                if (pendingCount > 0) issues.push(`${pendingCount} field pending`);
+                if (hasMalformed) issues.push("Nilai tidak valid");
+                if (!isTypeValid) issues.push("Tipe dokumen tidak jelas");
+                if (!hasApproved) issues.push("Tidak ada field disetujui");
+                
+                return (
+                  <p key={profile.document.id} className={issues.length === 0 ? "text-emerald-700" : "text-amber-700"}>
+                    {issues.length === 0 ? "✓" : "○"} {profile.document.filename}: {issues.length === 0 ? "Ready" : issues.join(", ")}
+                  </p>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <Button variant="outline" onClick={onClose}>Simpan & lanjutkan nanti</Button>
+        <Button disabled={!allApproved || finalizing} onClick={finalize} title={!allApproved ? "Selesaikan semua tab sebelum finalisasi" : ""}>
+          {finalizing ? (
+            <>
+              <Loader2 className="animate-spin" />
+              Menjalankan validasi...
+            </>
+          ) : (
+            "Finalisasi & buka review query"
+          )}
+        </Button>
+      </div>
     </div>
   </div>;
 }

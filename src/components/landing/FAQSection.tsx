@@ -7,16 +7,16 @@ export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const faqs = [
     [
-      "How does Veriflow handle financial calculations?",
-      "Veriflow separates document understanding from financial decisions. Extraction supports review, while contract matching, tolerance checks, and reconciliation outcomes remain traceable and reproducible.",
+      "How does Verflo handle financial calculations?",
+      "Verflo separates document understanding from financial decisions. Extraction supports review, while contract matching, tolerance checks, and reconciliation outcomes remain traceable and reproducible.",
     ],
     [
       "Do 3PL vendors need to install software?",
-      "No. Vendors can continue submitting their existing PDF invoices, waybills, and POD photos. Your team reviews the connected evidence inside Veriflow.",
+      "No. Vendors can continue submitting their existing PDF invoices, waybills, and POD photos. Your team reviews the connected evidence inside Verflo.",
     ],
     [
       "What happens when a document is blurry or incomplete?",
-      "Low-confidence fields remain visible for human review. Veriflow does not silently invent a value when evidence is insufficient.",
+      "Low-confidence fields remain visible for human review. Verflo does not silently invent a value when evidence is insufficient.",
     ],
     [
       "How does the audit trail support a dispute?",

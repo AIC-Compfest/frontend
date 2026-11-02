@@ -74,7 +74,6 @@ export default function RegisterPage() {
             <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#0077CC]">A clearer operating rhythm</span>
             <h1 className="font-display text-5xl leading-[1.05] text-[#12203A] mt-5">A shared view of every exception.</h1>
             <p className="text-base leading-relaxed text-[#55637A] max-w-md mt-6">Set up a workspace where finance and operations teams can trace the decision from billed amount to source document.</p>
-            <div className="mt-10 flex items-center gap-3 text-sm text-[#55637A]"><span className="h-2 w-2 rounded-full bg-[#00B4B3]" />Built for evidence-led 3PL reconciliation.</div>
           </div>
           <div className="w-full max-w-sm mx-auto space-y-4">
           <Card className="mx-auto border border-white/80 shadow-[0_24px_70px_rgba(36,58,94,0.12)] bg-white/90 rounded-[2rem] overflow-hidden backdrop-blur-xl">
@@ -153,10 +152,9 @@ export default function RegisterPage() {
                       onChange={(e) => setRole(e.target.value)}
                       className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#243A5E]"
                     >
-                      <option value="AP_MANAGER">AP_MANAGER (Accounts Payable)</option>
-                      <option value="FINANCE_CONTROLLER">FINANCE_CONTROLLER (Finance Lead)</option>
-                      <option value="LOGISTICS_MANAGER">LOGISTICS_MANAGER (Operations)</option>
-                      <option value="AUDITOR">AUDITOR (Independent Reviewer)</option>
+                      <option value="AP_MANAGER">AP MANAGER</option>
+                      <option value="FINANCE_CONTROLLER">FINANCE CONTROLLER</option>
+                      <option value="AUDITOR">AUDITOR</option>
                     </select>
                   </div>
 
@@ -192,7 +190,7 @@ export default function RegisterPage() {
 
       {/* Clean Subtle Footer */}
       <footer className="py-4 text-center text-[11px] text-slate-400 border-t border-slate-200/60 bg-white">
-        © 2026 LogiRecon AI • COMPFEST 18 Smart Logistics
+        © 2026 Verflo
       </footer>
     </div>
   );

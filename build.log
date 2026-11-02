@@ -1,0 +1,14 @@
+
+> frontend@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.3.1 (Turbopack)
+- Environments: .env
+Γ£ô Running next.config.ts took 138ms
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 4.3s
+  Running TypeScript ...
+IMPLEMENTATION_EXAMPLE.tsx(14,41): error TS2307: Cannot find module './components/BatchHitlReviewModal_v2' or its corresponding type declarations.
+Failed to type check.
+

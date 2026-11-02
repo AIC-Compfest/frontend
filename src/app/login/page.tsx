@@ -143,7 +143,7 @@ export default function LoginPage() {
 
       {/* Clean Subtle Footer */}
       <footer className="py-4 text-center text-[11px] text-slate-400 border-t border-slate-200/60 bg-white">
-        © 2026 LogiRecon AI • COMPFEST 18 Smart Logistics
+        © 2026 Verflo
       </footer>
     </div>
   );

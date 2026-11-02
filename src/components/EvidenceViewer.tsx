@@ -22,7 +22,14 @@ import { cn } from "@/lib/utils";
 import { API_V1 } from "@/lib/config";
 import { DocumentPageView, OverlayBox } from "@/components/evidence/DocumentPageView";
 
-type DocTab = "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT";
+type DocTab = string; // Now we use document IDs directly as tab keys
+
+interface DocumentTabInfo {
+  id: string;
+  type: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT";
+  label: string;
+  badge?: { label: string; color: string };
+}
 
 interface EvidenceViewerProps {
   event: ShipmentEvent;
@@ -128,10 +135,14 @@ export function EvidenceViewer({
   const [rows, setRows] = useState<EvidenceRow[]>([]);
   const [rowsError, setRowsError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [documentTabs, setDocumentTabs] = useState<DocumentTabInfo[]>([]);
+  const [segmentsLoading, setSegmentsLoading] = useState(false);
 
-  const entity = entityFor(event, activeDocumentTab);
-  const documentId = entity?.document_id;
-  const segmentId = entity?.segment_id;
+  // documentId is now the activeDocumentTab itself (a document UUID)
+  const documentId = activeDocumentTab;
+  const docTabInfo = documentTabs.find((t) => t.id === documentId);
+  const documentType = docTabInfo?.type;
+  const segmentId = undefined; // Not using segment_id filtering anymore
   const fileUrl = documentId ? `${API_V1}/documents/${documentId}/download` : null;
 
   const isPODMissing = useMemo(() => {
@@ -148,33 +159,112 @@ export function EvidenceViewer({
     );
   }, [event]);
 
+  // Fetch all documents in the ingest batch and create tabs
+  useEffect(() => {
+    if (!event.ingest_batch_id) return;
+
+    setSegmentsLoading(true);
+    const ctrl = new AbortController();
+
+    fetch(`${API_V1}/documents?batch=${encodeURIComponent(event.ingest_batch_id)}`, { signal: ctrl.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<{ data: Array<{ id: string; classification: string }> }>;
+      })
+      .then(async (response) => {
+        const docIds = response.data?.map((d: { id: string }) => d.id) || [];
+        if (docIds.length === 0) throw new Error("No documents in batch");
+
+        const tabs: DocumentTabInfo[] = [];
+        const docTypeMap: Record<string, "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT"> = {};
+
+        for (const docId of docIds) {
+          try {
+            const segResp = await fetch(`${API_V1}/documents/${docId}/segments`, { signal: ctrl.signal });
+            if (!segResp.ok) throw new Error(`Segments HTTP ${segResp.status}`);
+            
+            const segData = await segResp.json();
+            let docType: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT" = "INVOICE";
+            
+            // Find the first non-UNKNOWN document type in segments
+            for (const seg of segData.segments || []) {
+              if (seg.document_type && seg.document_type !== "UNKNOWN") {
+                docType = seg.document_type;
+                break;
+              }
+            }
+
+            docTypeMap[docId] = docType;
+
+            // Generate tab label and badge
+            let label = "";
+            let badge: { label: string; color: string } | undefined;
+
+            switch (docType) {
+              case "INVOICE":
+                label = "Invoice (Faktur)";
+                if (isDuplicate) {
+                  badge = { label: "DUPLIKAT", color: "bg-rose-50 text-rose-700 border-rose-200" };
+                }
+                break;
+              case "SURAT_JALAN":
+                label = "Surat Jalan";
+                break;
+              case "POD":
+                label = "POD (Bukti Kirim)";
+                if (isPODMissing) {
+                  badge = { label: "HILANG", color: "bg-rose-50 text-rose-700 border-rose-200" };
+                } else {
+                  badge = { label: "TERSEDIA", color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+                }
+                break;
+              case "RATE_AGREEMENT":
+                label = "Rate Card (PKS)";
+                break;
+            }
+
+            tabs.push({ id: docId, type: docType, label, badge });
+          } catch (e) {
+            console.error(`Failed to load segments for ${docId}:`, e);
+          }
+        }
+
+        setDocumentTabs(tabs);
+
+        // If current documentId is not in tabs, switch to first tab
+        if (tabs.length > 0 && !tabs.find((t) => t.id === documentId)) {
+          onTabChange(tabs[0].id as DocTab);
+        }
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") {
+          console.error("Failed to fetch batch documents:", e);
+          // Fallback: create a default tab using entity's document_id if available
+          const entity = entityFor(event, "INVOICE");
+          if (entity?.document_id) {
+            const docId = entity.document_id;
+            const defaultType: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT" = "INVOICE";
+            setDocumentTabs([{
+              id: docId,
+              type: defaultType,
+              label: "Invoice (Faktur)",
+              badge: isDuplicate ? { label: "DUPLIKAT", color: "bg-rose-50 text-rose-700 border-rose-200" } : undefined,
+            }]);
+            if (documentId !== docId) {
+              onTabChange(docId as DocTab);
+            }
+          }
+        }
+      })
+      .finally(() => setSegmentsLoading(false));
+
+    return () => ctrl.abort();
+  }, [event.ingest_batch_id, isDuplicate, isPODMissing]);
+
   // Dynamic Tabs reflecting the actual state of this transaction
   const dynamicTabs = useMemo(() => {
-    return [
-      {
-        key: "INVOICE" as DocTab,
-        label: "Invoice (Faktur)",
-        badge: isDuplicate ? "DUPLIKAT" : undefined,
-        badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
-      },
-      {
-        key: "SURAT_JALAN" as DocTab,
-        label: "Surat Jalan",
-      },
-      {
-        key: "POD" as DocTab,
-        label: "POD (Bukti Kirim)",
-        badge: isPODMissing ? "HILANG" : "TERSEDIA",
-        badgeColor: isPODMissing
-          ? "bg-rose-50 text-rose-700 border-rose-200"
-          : "bg-emerald-50 text-emerald-700 border-emerald-200",
-      },
-      {
-        key: "RATE_AGREEMENT" as DocTab,
-        label: "Rate Card (PKS)",
-      },
-    ];
-  }, [isDuplicate, isPODMissing]);
+    return documentTabs;
+  }, [documentTabs]);
 
   useEffect(() => {
     setRows([]);
@@ -229,8 +319,8 @@ export function EvidenceViewer({
       });
     };
 
+    // Use all rows since we're showing one document per tab
     for (const r of rows) {
-      if (segmentId && r.segment_id && r.segment_id !== segmentId) continue;
       if (r.bbox_x1 == null || r.bbox_y1 == null || r.bbox_x2 == null || r.bbox_y2 == null) continue;
       push(
         r.field_name,
@@ -240,12 +330,9 @@ export function EvidenceViewer({
         r.confidence
       );
     }
-    const fe: Record<string, EvidenceSource> = entity?.field_evidence || {};
-    for (const [name, src] of Object.entries(fe)) {
-      if (src?.bbox) push(name, src.page || 1, src.bbox, "", null);
-    }
+    
     return out.sort((a, b) => a.page - b.page || a.bbox.y1 - b.bbox.y1);
-  }, [rows, segmentId, entity, discrepantFields]);
+  }, [rows, discrepantFields]);
 
   const isSelected = (it: EvidenceItem) =>
     it.id === activeId ||
@@ -286,29 +373,29 @@ export function EvidenceViewer({
 
   return (
     <Card className="flex flex-col h-full bg-white border border-slate-200 shadow-2xs overflow-hidden p-0">
-      {/* Header Bar with Dynamic Tabs */}
+      {/* Header Bar with Document Tabs - One per document, no navigation buttons */}
       <CardHeader className="p-2.5 border-b border-slate-100 bg-[#EDF4FA]/70 flex flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 overflow-x-auto">
-          {dynamicTabs.map((t) => (
+          {dynamicTabs.map((tab) => (
             <Button
-              key={t.key}
+              key={tab.id}
               size="sm"
-              variant={activeDocumentTab === t.key ? "default" : "ghost"}
-              onClick={() => onTabChange(t.key)}
+              variant={documentId === tab.id ? "default" : "ghost"}
+              onClick={() => onTabChange(tab.id as DocTab)}
               className={cn(
                 "text-xs h-7 px-2.5 font-bold cursor-pointer relative",
-                activeDocumentTab === t.key ? "bg-[#243A5E] text-white" : "text-slate-600 hover:text-slate-900"
+                documentId === tab.id ? "bg-[#243A5E] text-white" : "text-slate-600 hover:text-slate-900"
               )}
             >
-              <span>{t.label}</span>
-              {t.badge && (
+              <span>{tab.label}</span>
+              {tab.badge && (
                 <span
                   className={cn(
                     "ml-1.5 text-[9px] px-1 py-0.2 rounded font-extrabold border",
-                    t.badgeColor || "bg-amber-100 text-amber-800 border-amber-200"
+                    tab.badge.color || "bg-amber-100 text-amber-800 border-amber-200"
                   )}
                 >
-                  {t.badge}
+                  {tab.badge.label}
                 </span>
               )}
             </Button>

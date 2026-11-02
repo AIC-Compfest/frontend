@@ -68,28 +68,7 @@ export function SettingsView() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-xl font-black text-[#243A5E]">
-            Reconciliation Policy & Thresholds
-          </h2>
-          <p className="text-xs text-slate-500">
-            Configure financial materiality rules, weight tolerance limits, and automated dispute urgency windows.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchPolicy}
-          disabled={loading}
-          className="text-xs font-semibold gap-1.5 h-8 text-slate-700"
-        >
-          <RotateCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>Reload</span>
-        </Button>
-      </div>
-
+    <div className="space-y-6 w-full">
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg font-medium">
           {error}

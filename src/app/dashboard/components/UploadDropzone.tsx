@@ -23,7 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { BatchHitlReviewModal } from "./BatchHitlReviewModal";
+import { BatchHitlReviewModal_Compact } from "./BatchHitlReviewModal_Compact";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_SIZE_MB = 10;
@@ -278,15 +278,6 @@ export function UploadDropzone() {
 
   return (
     <div className="space-y-6 max-w-5xl font-sans">
-      <div className="space-y-1">
-        <h2 className="text-xl font-extrabold text-[#1B2A4A] tracking-tight">
-          Document Ingest Hub (Multi-Upload)
-        </h2>
-        <p className="text-xs text-slate-500 leading-relaxed">
-          Unggah banyak dokumen logistik sekaligus (Invoice, Surat Jalan, POD, PKS) untuk ekstraksi otomatis AI dengan batas maksimal <strong>10 MB per file</strong>.
-        </p>
-      </div>
-
       {/* Upload Dropzone Card */}
       <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl overflow-hidden">
         <CardHeader className="p-6 pb-3 border-b border-slate-100 bg-slate-50/50">
@@ -650,7 +641,7 @@ export function UploadDropzone() {
           )}
         </CardContent>
       </Card>
-      {reviewDocumentIds && <BatchHitlReviewModal documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} onFinalized={(eventId) => {
+      {reviewDocumentIds && <BatchHitlReviewModal_Compact documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} onFinalized={(eventId) => {
         setReviewDocumentIds(null);
         window.location.assign(`/dashboard?event=${encodeURIComponent(eventId)}`);
       }} />}
