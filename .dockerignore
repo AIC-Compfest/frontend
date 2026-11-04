@@ -7,3 +7,7 @@ npm-debug.log*
 Dockerfile*
 docker-compose*
 README.md
+.agents
+.vscode
+.kiro
+.github

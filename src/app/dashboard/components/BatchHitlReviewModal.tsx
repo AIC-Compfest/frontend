@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, FileText, Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { DocumentProfile, finalizeDocumentBatch, getDocumentProfile, reprocessDocument, reviewDocumentField } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
 import { FIELD_REGISTRY, type DocumentType } from "@/lib/field_registry.gen";
-import { asTablePayload, displayValue, hasSuggestion, needsManualCheck } from "@/lib/review";
+import { asTablePayload, displayValue, hasSuggestion } from "@/lib/review";
 import { TablePayloadView } from "./TablePayloadView";
 import { API_V1 } from "@/lib/config";
+import { cn } from "@/lib/utils";
+import { btnOutline, btnPrimary, chip, focusRing, inputClass, textareaClass, th } from "@/lib/dashboard-ui";
 
 interface Props {
   documentIds: string[];
@@ -20,9 +21,6 @@ interface Props {
 const decisionFor = (profile: DocumentProfile, predictionId: string) =>
   profile.decisions.find((decision) => decision.prediction_id === predictionId);
 
-const labelFor = (profile: DocumentProfile) =>
-  profile.segments[0]?.document_type || profile.document.classification || "UNKNOWN";
-
 const isMissingPrediction = (prediction: DocumentProfile["predictions"][number]) =>
   !hasSuggestion(prediction.predicted_value, prediction.predicted_raw_text);
 
@@ -31,9 +29,16 @@ const hasMalformedScalar = (profile: DocumentProfile) => profile.predictions.som
   (prediction.predicted_value.length > 160 || /[\r\n]/.test(prediction.predicted_value))
 );
 
+/**
+ * BatchHitlReviewModal (live modal; previously BatchHitlReviewModal_Compact)
+ *
+ * Layout: PDF (left) | field table (right)
+ * Only documents from ONE ingest batch (ingest_batch_id) are shown.
+ * One tab per document inside that batch.
+ */
 export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Props) {
   const [profiles, setProfiles] = useState<DocumentProfile[]>([]);
-  const [activeId, setActiveId] = useState("");
+  const [activeDocId, setActiveDocId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [reprocessing, setReprocessing] = useState(false);
@@ -41,23 +46,66 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
   const [error, setError] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Record<string, string>>({});
 
+  // Load the first document to find the batch ID, then load and filter the whole batch.
+  // This keeps documents from other batches out of the modal.
   useEffect(() => {
     let mounted = true;
-    Promise.all(documentIds.map(getDocumentProfile))
-      .then((items) => {
+    if (!documentIds || documentIds.length === 0) {
+      setError("No documents to audit");
+      setLoading(false);
+      return;
+    }
+
+    getDocumentProfile(documentIds[0])
+      .then((firstProfile) => {
         if (!mounted) return;
-        setProfiles(items);
-        setActiveId(items[0]?.document.id || "");
+
+        const batchId = firstProfile.document.ingest_batch_id;
+        if (!batchId) {
+          setError("Document has no batch ID");
+          setLoading(false);
+          return;
+        }
+
+        const docsInBatch = documentIds;
+
+        Promise.all(docsInBatch.map(getDocumentProfile))
+          .then((allProfiles) => {
+            if (!mounted) return;
+
+            // Keep only documents from the same batch
+            const filtered = allProfiles.filter(
+              (p) => p.document.ingest_batch_id === batchId
+            );
+
+            setProfiles(filtered);
+            setActiveDocId(filtered[0]?.document.id || "");
+          })
+          .catch((reason: unknown) =>
+            mounted && setError(reason instanceof Error ? reason.message : "Failed to load document profile")
+          )
+          .finally(() => mounted && setLoading(false));
       })
-      .catch((reason: unknown) => mounted && setError(reason instanceof Error ? reason.message : "Profil audit tidak dapat dimuat"))
-      .finally(() => mounted && setLoading(false));
+      .catch((reason: unknown) => {
+        if (mounted) {
+          setError(reason instanceof Error ? reason.message : "Audit profile could not be loaded");
+          setLoading(false);
+        }
+      });
+
     return () => { mounted = false; };
   }, [documentIds]);
 
-  const active = profiles.find((profile) => profile.document.id === activeId);
+  // profiles already holds only the documents of one batch
+  const currentBatchId = profiles[0]?.document.ingest_batch_id;
+  const documentsInCurrentBatch = profiles;
+
+  const active = documentsInCurrentBatch.find((p) => p.document.id === activeDocId);
+
   const pending = (profile: DocumentProfile) => profile.predictions.filter(
     (prediction) => decisionFor(profile, prediction.id)?.decision_status === "PENDING_REVIEW" && visiblePredictions(profile).some((item) => item.id === prediction.id)
   );
+
   const visiblePredictions = (profile: DocumentProfile) => {
     const documentType = (profile.segments[0]?.document_type || profile.document.classification || "UNKNOWN") as DocumentType;
     const fields = FIELD_REGISTRY[documentType] ?? [];
@@ -65,43 +113,23 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
     return profile.predictions.filter((prediction) => prediction.registry_visible !== false && order.has(prediction.field_name))
       .sort((a, b) => order.get(a.field_name)! - order.get(b.field_name)!);
   };
-  const allApproved = useMemo(
-    () => {
-      if (profiles.length === 0) return false;
-      
-      // Each profile must:
-      // 1. Have predictions
-      // 2. Have NO pending items
-      // 3. Have NO malformed scalars
-      // 4. Have a resolved document type
-      // 5. Have at least one visible prediction approved
-      
-      return profiles.every((profile) => {
-        // Must have predictions
-        if (profile.predictions.length === 0) return false;
-        
-        // Must have NO pending items
-        if (pending(profile).length > 0) return false;
-        
-        // Must NOT have malformed scalars
-        if (hasMalformedScalar(profile)) return false;
-        
-        // Must have a resolved document type
-        const docType = profile.segments[0]?.document_type || profile.document.classification;
-        if (!docType || docType === "UNKNOWN") return false;
-        
-        // Must have at least one visible prediction that was approved or corrected
-        const hasApprovedOrCorrected = profile.predictions.some((pred) => {
-          if (pred.registry_visible === false) return false;
-          const decision = profile.decisions.find((d) => d.prediction_id === pred.id);
-          return decision && (decision.decision_status === "APPROVED" || decision.decision_status === "CORRECTED");
-        });
-        
-        return hasApprovedOrCorrected;
+
+  const allApproved = useMemo(() => {
+    if (documentsInCurrentBatch.length === 0) return false;
+    return documentsInCurrentBatch.every((profile) => {
+      if (profile.predictions.length === 0) return false;
+      if (pending(profile).length > 0) return false;
+      if (hasMalformedScalar(profile)) return false;
+      const docType = profile.segments[0]?.document_type || profile.document.classification;
+      if (!docType || docType === "UNKNOWN") return false;
+      const hasApprovedOrCorrected = profile.predictions.some((pred) => {
+        if (pred.registry_visible === false) return false;
+        const decision = profile.decisions.find((d) => d.prediction_id === pred.id);
+        return decision && (decision.decision_status === "APPROVED" || decision.decision_status === "CORRECTED");
       });
-    },
-    [profiles]
-  );
+      return hasApprovedOrCorrected;
+    });
+  }, [documentsInCurrentBatch]);
 
   const apply = async (profile: DocumentProfile, predictionId: string, action: "ACCEPT_PREDICTION" | "CORRECT_VALUE") => {
     setSaving(predictionId);
@@ -114,7 +142,7 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
         if (table) {
           const rows = JSON.parse(corrections[predictionId] || "[]") as unknown;
           if (!Array.isArray(rows) || rows.some((row) => !Array.isArray(row) || row.length !== (table.headers ?? []).length)) {
-            throw new Error("Setiap baris tabel harus memiliki jumlah sel yang sama dengan header.");
+            throw new Error("Each table row must have the same number of cells as the header.");
           }
           reviewedValue = { ...table, rows: rows.map((cells, index) => ({ index: index + 1, cells })) };
         } else {
@@ -125,115 +153,60 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
         prediction_id: predictionId,
         action,
         reviewed_value: reviewedValue,
+        // Audit reason text sent to the backend. The Indonesian wording is kept on purpose: request bodies are out of scope for the translation pass.
         reason: action === "CORRECT_VALUE" ? "Koreksi auditor pada audit batch HITL" : "Disetujui auditor pada audit batch HITL",
         reviewer_external_id: getStoredUser()?.id,
       });
       setProfiles((items) => items.map((item) => item.document.id === updated.document.id ? updated : item));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Keputusan tidak tersimpan");
+      setError(reason instanceof Error ? reason.message : "Decision was not saved");
     } finally {
       setSaving(null);
     }
   };
 
+  const isMissing = isMissingPrediction;
+
   const approveDocument = async (profile: DocumentProfile) => {
-    // Persist each field separately: the database retains an immutable review
-    // record for every mapping, rather than a coarse document-only approval.
-    for (const prediction of pending(profile).filter((item) => !isMissingPrediction(item))) {
+    for (const prediction of pending(profile).filter((item) => !isMissing(item))) {
       await apply(profile, prediction.id, "ACCEPT_PREDICTION");
     }
   };
 
   const finalize = async () => {
-    const batchId = profiles[0]?.document.ingest_batch_id;
+    const batchId = currentBatchId;
     if (!batchId) {
-      setError("Batch ID tidak ditemukan. Silakan pilih dokumen dari batch yang valid.");
+      setError("Batch ID not found.");
       return;
     }
-    
-    // Validate all documents meet finalization requirements
+
     const validationErrors: string[] = [];
-    const validationLogs: string[] = [];
-    
-    console.log(`[FINALIZE] Starting batch validation for batch ID: ${batchId}`);
-    console.log(`[FINALIZE] Documents to validate: ${profiles.length}`);
-    
-    profiles.forEach((profile, index) => {
+    documentsInCurrentBatch.forEach((profile, index) => {
       const docNum = index + 1;
-      const filename = profile.document.filename;
-      
-      console.log(`[FINALIZE] Document ${docNum}: ${filename}`);
-      
       if (profile.predictions.length === 0) {
-        const msg = `Dokumen ${docNum} (${filename}): Belum ada ekstraksi field`;
-        validationErrors.push(msg);
-        validationLogs.push(`  ✗ ${msg}`);
-      } else {
-        console.log(`  ✓ Predictions: ${profile.predictions.length}`);
+        validationErrors.push(`Document ${docNum}: No extraction yet`);
       }
-      
-      const pendingCount = pending(profile).length;
-      if (pendingCount > 0) {
-        const msg = `Dokumen ${docNum} (${filename}): ${pendingCount} field masih belum disetujui`;
-        validationErrors.push(msg);
-        validationLogs.push(`  ✗ ${msg}`);
-      } else {
-        console.log(`  ✓ All predictions decided`);
+      if (pending(profile).length > 0) {
+        validationErrors.push(`Document ${docNum}: ${pending(profile).length} fields pending`);
       }
-      
       if (hasMalformedScalar(profile)) {
-        const msg = `Dokumen ${docNum} (${filename}): Nilai field tidak valid, jalankan ulang AI`;
-        validationErrors.push(msg);
-        validationLogs.push(`  ✗ ${msg}`);
-      } else {
-        console.log(`  ✓ No malformed scalars`);
-      }
-      
-      const docType = profile.segments[0]?.document_type || profile.document.classification;
-      if (!docType || docType === "UNKNOWN") {
-        const msg = `Dokumen ${docNum} (${filename}): Tipe dokumen tidak teridentifikasi`;
-        validationErrors.push(msg);
-        validationLogs.push(`  ✗ ${msg}`);
-      } else {
-        console.log(`  ✓ Document type: ${docType}`);
-      }
-      
-      const hasApprovedOrCorrected = profile.predictions.some((pred) => {
-        if (pred.registry_visible === false) return false;
-        const decision = profile.decisions.find((d) => d.prediction_id === pred.id);
-        return decision && (decision.decision_status === "APPROVED" || decision.decision_status === "CORRECTED");
-      });
-      
-      if (!hasApprovedOrCorrected) {
-        const msg = `Dokumen ${docNum} (${filename}): Tidak ada field yang disetujui`;
-        validationErrors.push(msg);
-        validationLogs.push(`  ✗ ${msg}`);
-      } else {
-        console.log(`  ✓ Has approved/corrected fields`);
+        validationErrors.push(`Document ${docNum}: Invalid value`);
       }
     });
-    
+
     if (validationErrors.length > 0) {
-      console.log(`[FINALIZE] Validation failed with ${validationErrors.length} error(s)`);
-      validationLogs.forEach(log => console.log(log));
-      setError(`Finalisasi tidak dapat dilakukan:\n${validationErrors.join("\n")}`);
+      setError(`Finalization cannot be completed:\n${validationErrors.join("\n")}`);
       return;
     }
-    
-    console.log(`[FINALIZE] All validations passed, proceeding to finalize batch...`);
-    
+
     setFinalizing(true);
     setError(null);
     try {
-      console.log(`[FINALIZE] Calling finalizeDocumentBatch(${batchId})`);
       const event = await finalizeDocumentBatch(batchId);
-      console.log(`[FINALIZE] Success! Event ID: ${event.event_id}`);
-      console.log(`[FINALIZE] Reconciliation status: ${event.reconciliation?.status}`);
       onFinalized(event.event_id);
     } catch (reason) {
-      const errorMsg = reason instanceof Error ? reason.message : "Finalisasi rekonsiliasi gagal";
-      console.error(`[FINALIZE] Error:`, errorMsg);
-      setError(errorMsg || "Finalisasi rekonsiliasi gagal");
+      const errorMsg = reason instanceof Error ? reason.message : "Finalization failed";
+      setError(errorMsg);
     } finally {
       setFinalizing(false);
     }
@@ -248,83 +221,298 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
       const refreshed = await getDocumentProfile(active.document.id);
       setProfiles((items) => items.map((item) => item.document.id === refreshed.document.id ? refreshed : item));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Ekstraksi ulang gagal");
+      setError(reason instanceof Error ? reason.message : "Re-extraction failed");
     } finally {
       setReprocessing(false);
     }
   };
 
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-label="Audit HITL batch">
-    <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-      <div className="flex items-start justify-between border-b border-slate-200 p-5">
-        <div><h2 className="flex items-center gap-2 text-base font-bold text-[#1B2A4A]"><ShieldCheck className="h-5 w-5 text-sky-600" />Audit mapping dokumen</h2><p className="mt-1 text-xs text-slate-500">Setujui atau koreksi setiap mapping. Semua tab harus selesai sebelum audit batch dapat ditutup.</p></div>
-        <Badge variant={allApproved ? "success" : "warning"}>{allApproved ? "Semua disetujui" : `${profiles.filter((p) => pending(p).length > 0).length} tab belum selesai`}</Badge>
-      </div>
-      {loading ? <div className="p-16 text-center text-sm text-slate-500"><Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin" />Memuat hasil ekstraksi...</div> : error && !active ? <div className="m-5 rounded-lg bg-rose-50 p-4 text-sm text-rose-700"><AlertCircle className="mr-2 inline h-4 w-4" />{error}</div> : <>
-        <div className="flex gap-2 overflow-x-auto border-b border-slate-100 px-5 pt-3">
-          {profiles.map((profile) => <button key={profile.document.id} onClick={() => setActiveId(profile.document.id)} className={`border-b-2 px-3 pb-3 text-xs font-bold ${activeId === profile.document.id ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500"}`}>
-            {labelFor(profile)}{profiles.filter((candidate) => labelFor(candidate) === labelFor(profile)).length > 1 ? ` · ${profile.document.filename}` : ""} {pending(profile).length > 0 ? `(${pending(profile).length})` : "✓"}
-          </button>)}
+  const issuesFor = (profile: DocumentProfile) => {
+    const issues: string[] = [];
+    if (profile.predictions.length === 0) issues.push("No extraction yet");
+    if (pending(profile).length > 0) issues.push(`${pending(profile).length} fields pending`);
+    if (hasMalformedScalar(profile)) issues.push("Invalid value");
+    return issues;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-2" role="dialog" aria-modal="true" aria-labelledby="batch-review-title">
+      <div className="flex max-h-[96vh] w-screen max-w-[1920px] flex-col overflow-hidden rounded-card border border-hairline bg-card shadow-drawer">
+
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-hairline px-6 py-4">
+          <div>
+            <h2 id="batch-review-title" className="flex items-center gap-2 font-display text-[16px] font-normal text-ink">
+              <ShieldCheck className="h-5 w-5 text-navy" strokeWidth={1.75} aria-hidden="true" />
+              Document mapping audit
+            </h2>
+            <p className="mt-0.5 text-[12px] tabular-nums text-body">
+              Batch {currentBatchId?.substring(0, 8)} · {documentsInCurrentBatch.length} documents
+            </p>
+          </div>
+          <span className={chip(allApproved ? "success" : "warning", "text-xs")}>
+            {allApproved ? "Approved" : `${documentsInCurrentBatch.filter((p) => pending(p).length > 0).length} pending`}
+          </span>
         </div>
-        {active && <div className="min-h-0 flex-1 overflow-y-auto p-5">
-          {error && <div className="mb-3 rounded-lg bg-rose-50 p-3 text-xs text-rose-700"><AlertCircle className="mr-1 inline h-3.5 w-3.5" />{error}</div>}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-800">{active.document.filename}</p><p className="text-[11px] text-slate-500">{labelFor(active)} · {active.predictions.length} field hasil ekstraksi</p>{hasMalformedScalar(active) && <p className="mt-1 text-[11px] font-medium text-amber-700">Mapping lama berisi nilai scalar yang tidak valid. Jalankan ulang AI sebelum menyetujui dokumen.</p>}{pending(active).some(isMissingPrediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Nilai kosong tidak akan disetujui otomatis; jalankan ulang AI atau isi koreksi pada field tersebut untuk menutup tab.</p>}</div><div className="flex gap-2">{(hasMalformedScalar(active) || pending(active).some(isMissingPrediction)) && <Button size="sm" variant="outline" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button>}<a href={`${API_V1}/documents/${active.document.id}/download`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md border border-sky-200 bg-white px-3 text-xs font-semibold text-sky-700 hover:bg-sky-50"><FileText className="h-3.5 w-3.5" />Lihat PDF/Gambar asli</a><Button size="sm" disabled={saving !== null || pending(active).length === 0} onClick={() => approveDocument(active)} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle2 />Setujui field tersedia</Button></div></div>
-          {visiblePredictions(active).length === 0 ? <div className="flex items-center justify-between gap-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800"><span>Belum ada mapping tersimpan. Jalankan ekstraksi ulang pada dokumen asli untuk membuat field dan confidence.</span><Button size="sm" disabled={reprocessing} onClick={reprocess}>{reprocessing ? <><Loader2 className="animate-spin" />Mengekstrak...</> : "Jalankan ulang AI"}</Button></div> : <div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full min-w-[620px] text-left text-xs"><thead className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Field</th><th className="px-4 py-3">Nilai hasil mapping</th><th className="px-4 py-3">Confidence</th><th className="px-4 py-3 text-right">Aksi audit</th></tr></thead><tbody className="divide-y divide-slate-100">{visiblePredictions(active).map((prediction) => {
-            const decision = decisionFor(active, prediction.id); const isPending = decision?.decision_status === "PENDING_REVIEW"; const busy = saving === prediction.id;
-            const confidence = typeof prediction.score === "number" ? `${(prediction.score * 100).toFixed(1)}%` : "—";
-            const missingValue = isMissingPrediction(prediction);
-            const table = asTablePayload(prediction.predicted_value);
-            const valueText = displayValue(prediction.predicted_value, prediction.predicted_raw_text);
-            const sourceRawText = typeof prediction.decoder_metadata?.source_raw_text === "string" ? prediction.decoder_metadata.source_raw_text : prediction.predicted_raw_text;
-            return <tr key={prediction.id} className="align-top"><td className="px-4 py-3 font-bold text-slate-800">{prediction.field_name}</td><td className="px-4 py-3 text-slate-900">{table ? <TablePayloadView payload={table} /> : <p>{missingValue ? <span className="text-amber-700">Tidak ada kandidat — isi koreksi</span> : valueText}</p>}{sourceRawText && <details className="mt-1 text-[11px] text-slate-500"><summary>Cuplikan sumber</summary><p className="mt-1 whitespace-pre-wrap">{sourceRawText}</p></details>}{needsManualCheck(prediction) && <p className="mt-1 text-[11px] font-medium text-amber-700">Periksa manual</p>}{isPending && (table ? <textarea value={corrections[prediction.id] ?? JSON.stringify(table.rows.map((row) => row.cells ?? []), null, 2)} onChange={(event) => setCorrections((values) => ({ ...values, [prediction.id]: event.target.value }))} placeholder="Ketik baris JSON" className="mt-2 h-28 w-full rounded-md border border-slate-200 p-2 font-mono text-xs" /> : <input value={corrections[prediction.id] || ""} onChange={(event) => setCorrections((values) => ({ ...values, [prediction.id]: event.target.value }))} placeholder="Ketik nilai koreksi" className="mt-2 h-8 w-full rounded-md border border-slate-200 px-2 text-xs" />)}</td><td className="px-4 py-3 font-mono text-slate-700">{confidence}</td><td className="px-4 py-3 text-right">{isPending ? <div className="flex justify-end gap-2"><Button size="sm" disabled={busy || missingValue} title={missingValue ? "Nilai kosong harus dikoreksi, tidak dapat disetujui" : undefined} onClick={() => apply(active, prediction.id, "ACCEPT_PREDICTION")}>Terima</Button><Button size="sm" variant="outline" disabled={busy || !corrections[prediction.id]?.trim()} onClick={() => apply(active, prediction.id, "CORRECT_VALUE")}>Koreksi</Button></div> : <Badge variant="success">{decision?.decision_status || prediction.prediction_status}</Badge>}</td></tr>;
-          })}</tbody></table></div>}
-        </div>}
-      </>}
-      <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4">
-        <div className="flex-1">
-          {!allApproved && profiles.length > 0 && (
-            <div className="text-xs text-slate-600 space-y-1">
-              <p className="font-semibold text-slate-700">Validasi Finalisasi:</p>
-              {profiles.map((profile, idx) => {
-                const docNum = idx + 1;
-                const pendingCount = pending(profile).length;
-                const hasMalformed = hasMalformedScalar(profile);
-                const docType = profile.segments[0]?.document_type || profile.document.classification;
-                const isTypeValid = docType && docType !== "UNKNOWN";
-                const hasApproved = profile.predictions.some((pred) => {
-                  if (pred.registry_visible === false) return false;
-                  const decision = profile.decisions.find((d) => d.prediction_id === pred.id);
-                  return decision && (decision.decision_status === "APPROVED" || decision.decision_status === "CORRECTED");
-                });
-                
-                const issues = [];
-                if (profile.predictions.length === 0) issues.push("Belum ada ekstraksi");
-                if (pendingCount > 0) issues.push(`${pendingCount} field pending`);
-                if (hasMalformed) issues.push("Nilai tidak valid");
-                if (!isTypeValid) issues.push("Tipe dokumen tidak jelas");
-                if (!hasApproved) issues.push("Tidak ada field disetujui");
-                
+
+        {loading ? (
+          <div className="flex flex-col items-center gap-3 p-16 text-center text-[13px] text-body">
+            <Loader2 className="h-6 w-6 animate-spin text-navy" strokeWidth={1.75} aria-hidden="true" />
+            Loading {documentIds.length} documents...
+          </div>
+        ) : error && !active ? (
+          <div role="alert" className="m-5 flex items-center gap-2 rounded-control border border-error/40 bg-error-soft p-4 text-[13px] text-error-ink">
+            <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span>{error}</span>
+          </div>
+        ) : (
+          <>
+            {/* Document tabs: one per document in this batch */}
+            <div role="tablist" className="flex gap-2 overflow-x-auto border-b border-hairline px-6 pb-1 pt-2">
+              {documentsInCurrentBatch.map((profile) => {
+                const isActive = activeDocId === profile.document.id;
+                const count = pending(profile).length;
                 return (
-                  <p key={profile.document.id} className={issues.length === 0 ? "text-emerald-700" : "text-amber-700"}>
-                    {issues.length === 0 ? "✓" : "○"} {profile.document.filename}: {issues.length === 0 ? "Ready" : issues.join(", ")}
-                  </p>
+                  <button
+                    key={profile.document.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setActiveDocId(profile.document.id)}
+                    className={cn(
+                      "cursor-pointer whitespace-nowrap border-b-2 px-3 pb-2 text-[12px] font-semibold transition-colors",
+                      isActive ? "border-navy text-navy" : "border-transparent text-body hover:text-ink",
+                      focusRing
+                    )}
+                  >
+                    {profile.document.filename}
+                    {count > 0 ? ` (${count})` : ""}
+                  </button>
                 );
               })}
             </div>
-          )}
+
+            {/* Main content: document (left) and field table (right) */}
+            {active && (
+              <div className="flex min-h-0 flex-1 overflow-hidden">
+                {/* Left: original document */}
+                <div className="w-5/12 overflow-y-auto border-r border-hairline bg-surface-soft p-4">
+                  <div className="h-full overflow-hidden rounded-control border border-hairline bg-card">
+                    <iframe
+                      src={`${API_V1}/documents/${active.document.id}/download`}
+                      className="h-full w-full"
+                      title={`Document: ${active.document.filename}`}
+                    />
+                  </div>
+                </div>
+
+                {/* Right: field table */}
+                <div className="flex w-7/12 flex-col overflow-y-auto p-5">
+                  <div className="mb-4 border-b border-hairline pb-4">
+                    <p className="text-[14px] font-semibold text-ink">{active?.document.filename}</p>
+                    <div className="mt-1 flex items-center gap-4 text-[12px] text-body">
+                      <span>{active?.segments[0]?.document_type || active?.document.classification}</span>
+                      <span aria-hidden="true">•</span>
+                      <span className="tabular-nums">{active?.predictions.length} fields</span>
+                    </div>
+                    {active && hasMalformedScalar(active) && (
+                      <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-medium text-warning-ink">
+                        <AlertCircle className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                        Invalid value
+                      </p>
+                    )}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {active && (hasMalformedScalar(active) || pending(active).some(isMissing)) && (
+                        <Button type="button" variant="outline" disabled={reprocessing} onClick={reprocess} className={cn(btnOutline, "h-8 px-3 text-[12px]")}>
+                          {reprocessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.75} aria-hidden="true" /> : "Re-run AI"}
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        disabled={saving !== null || !active || pending(active).length === 0}
+                        onClick={() => active && approveDocument(active)}
+                        className={cn(btnPrimary, "h-8 px-3 text-[12px]")}
+                      >
+                        <CheckCircle2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+                        Approve available fields
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Field table */}
+                  {visiblePredictions(active).length === 0 ? (
+                    <div className="flex items-center justify-between gap-3 rounded-control border border-warning/40 bg-warning-soft p-4 text-[13px] text-warning-ink">
+                      <span>No mapping yet. Re-run extraction.</span>
+                      <Button type="button" variant="outline" disabled={reprocessing} onClick={reprocess} className={cn(btnOutline, "h-8 px-3 text-[12px]")}>
+                        {reprocessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.75} aria-hidden="true" /> : "Retry"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 overflow-x-auto">
+                      <table className="w-full min-w-[750px] border border-hairline text-left text-[12px]">
+                        <thead className="sticky top-0">
+                          <tr>
+                            <th className={th}>Field</th>
+                            <th className={th}>Mapped value</th>
+                            <th className={th}>Confidence</th>
+                            <th className={cn(th, "text-right")}>Audit action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visiblePredictions(active).map((prediction) => {
+                            const decision = decisionFor(active, prediction.id);
+                            const isPending = decision?.decision_status === "PENDING_REVIEW";
+                            const busy = saving === prediction.id;
+                            const confidence = typeof prediction.score === "number" ? `${(prediction.score * 100).toFixed(1)}%` : "N/A";
+                            const missingValue = isMissing(prediction);
+                            const table = asTablePayload(prediction.predicted_value);
+                            const valueText = displayValue(prediction.predicted_value, prediction.predicted_raw_text);
+                            const sourceRawText = typeof prediction.decoder_metadata?.source_raw_text === "string"
+                              ? prediction.decoder_metadata.source_raw_text
+                              : prediction.predicted_raw_text;
+
+                            return (
+                              <tr key={prediction.id} className="border-b border-hairline align-top last:border-b-0 hover:bg-surface-soft">
+                                <td className="px-4 py-3 font-semibold text-ink">{prediction.field_name}</td>
+
+                                <td className="px-4 py-3 text-ink">
+                                  {table ? (
+                                    <TablePayloadView payload={table} />
+                                  ) : (
+                                    <div>
+                                      <p className={missingValue ? "font-medium text-warning-ink" : ""}>
+                                        {missingValue ? "No candidate, enter a correction" : valueText}
+                                      </p>
+                                      {sourceRawText && (
+                                        <details className="mt-2 text-[12px] text-body">
+                                          <summary className="cursor-pointer">Source snippet</summary>
+                                          <p className="mt-1 whitespace-pre-wrap font-mono text-[10px]">{sourceRawText}</p>
+                                        </details>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+
+                                <td className="px-4 py-3 tabular-nums text-body">{confidence}</td>
+
+                                <td className="px-4 py-3 text-right">
+                                  {isPending ? (
+                                    <div className="flex items-center justify-end gap-2">
+                                      {table ? (
+                                        <textarea
+                                          value={corrections[prediction.id] ?? JSON.stringify(table.rows.map((row) => row.cells ?? []), null, 2)}
+                                          onChange={(event) => setCorrections((values) => ({
+                                            ...values,
+                                            [prediction.id]: event.target.value
+                                          }))}
+                                          placeholder="JSON"
+                                          className={cn(textareaClass, "h-20 w-40 p-2 text-[12px]")}
+                                        />
+                                      ) : (
+                                        <input
+                                          value={corrections[prediction.id] || ""}
+                                          onChange={(event) => setCorrections((values) => ({
+                                            ...values,
+                                            [prediction.id]: event.target.value
+                                          }))}
+                                          placeholder="Correction"
+                                          aria-label={`Correction for ${prediction.field_name}`}
+                                          className={cn(inputClass, "h-9 w-32 px-3 text-[12px]")}
+                                        />
+                                      )}
+                                      <div className="flex gap-2">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          disabled={busy || missingValue}
+                                          onClick={() => apply(active, prediction.id, "ACCEPT_PREDICTION")}
+                                          className={cn(btnPrimary, "h-9 px-3 text-[12px]")}
+                                        >
+                                          Accept
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          disabled={busy || !corrections[prediction.id]?.trim()}
+                                          onClick={() => apply(active, prediction.id, "CORRECT_VALUE")}
+                                          className={cn(btnOutline, "h-9 px-3 text-[12px]")}
+                                        >
+                                          Correct
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className={chip(decision?.decision_status === "APPROVED" ? "success" : "neutral")}>
+                                      {decision?.decision_status === "APPROVED" ? (
+                                        <>
+                                          <CheckCircle2 className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                                          Approved
+                                        </>
+                                      ) : (
+                                        decision?.decision_status ?? "N/A"
+                                      )}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 border-t border-hairline bg-surface-soft/60 px-6 py-4">
+          <div className="flex-1">
+            {!allApproved && documentsInCurrentBatch.length > 0 && (
+              <ul className="space-y-1 text-[13px] text-body">
+                {documentsInCurrentBatch.map((profile) => {
+                  const issues = issuesFor(profile);
+                  const ready = issues.length === 0;
+                  return (
+                    <li key={profile.document.id} className={cn("flex items-center gap-2", ready ? "text-teal-ink" : "text-warning-ink")}>
+                      {ready ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                      ) : (
+                        <Circle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                      )}
+                      <span>
+                        {profile.document.filename}: {ready ? "Ready" : issues.join(", ")}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <Button type="button" variant="outline" onClick={onClose} className={cn(btnOutline, "h-9 px-4 text-[13px]")}>
+            Save &amp; continue later
+          </Button>
+          <Button
+            type="button"
+            disabled={!allApproved || finalizing}
+            onClick={finalize}
+            className={cn(btnPrimary, "h-9 px-4 text-[13px]", focusRing)}
+          >
+            {finalizing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} aria-hidden="true" />
+                Validating...
+              </>
+            ) : (
+              "Finalize & open review"
+            )}
+          </Button>
         </div>
-        <Button variant="outline" onClick={onClose}>Simpan & lanjutkan nanti</Button>
-        <Button disabled={!allApproved || finalizing} onClick={finalize} title={!allApproved ? "Selesaikan semua tab sebelum finalisasi" : ""}>
-          {finalizing ? (
-            <>
-              <Loader2 className="animate-spin" />
-              Menjalankan validasi...
-            </>
-          ) : (
-            "Finalisasi & buka review query"
-          )}
-        </Button>
       </div>
     </div>
-  </div>;
+  );
 }

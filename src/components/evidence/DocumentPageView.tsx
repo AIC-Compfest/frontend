@@ -34,10 +34,10 @@ interface DocumentPageViewProps {
 }
 
 const TONE_CLASS: Record<OverlayBox["tone"], string> = {
-  default: "border-sky-500/80 bg-sky-400/10 hover:bg-sky-400/25",
-  selected: "border-blue-600 bg-blue-500/25 ring-2 ring-blue-500/60 z-20",
-  discrepant: "border-rose-600 bg-rose-500/20 ring-2 ring-rose-500/50 z-10",
-  uncertain: "border-amber-500 bg-amber-400/20 z-10",
+  default: "border-action/80 bg-action/10 hover:bg-action/25",
+  selected: "border-navy bg-action/25 ring-2 ring-action/60 z-20",
+  discrepant: "border-error-ink bg-error/20 ring-2 ring-error/50 z-10",
+  uncertain: "border-warning bg-warning/20 z-10",
 };
 
 // Parsed documents are cached per URL so switching tabs that share one bundle file is instant.
@@ -71,7 +71,7 @@ async function loadFile(url: string): Promise<LoadedFile> {
     const blob = new Blob([buf], { type: contentType });
     return { kind: "image", imageUrl: URL.createObjectURL(blob), pageCount: 1 };
   }
-  throw new Error(`Format ${contentType || "tidak dikenal"} tidak dapat ditampilkan di browser`);
+  throw new Error(`Format ${contentType || "unknown"} cannot be displayed in the browser`);
 }
 
 export function DocumentPageView({
@@ -117,7 +117,7 @@ export function DocumentPageView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileUrl]);
 
-  // Track available width so the page always fits the pane at 100% zoom.
+  // Track the available width so the page always fits the pane at 100% zoom.
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -165,18 +165,18 @@ export function DocumentPageView({
   const pageBoxes = boxes.filter((b) => b.page === page);
 
   return (
-    <div ref={wrapRef} className="w-full h-full overflow-auto bg-slate-200/70 p-3">
+    <div ref={wrapRef} className="h-full w-full overflow-auto bg-surface-soft p-3">
       {loading && (
-        <div className="py-16 text-center text-xs text-slate-500">Memuat dokumen asli...</div>
+        <div className="py-16 text-center text-[13px] text-body">Loading original document...</div>
       )}
       {error && (
-        <div className="m-4 rounded border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
-          Dokumen asli tidak dapat ditampilkan: {error}
+        <div className="m-4 rounded-control border border-error/40 bg-error-soft p-3 text-[13px] text-error-ink">
+          Original document cannot be displayed: {error}
         </div>
       )}
       {!error && file && (
         <div
-          className="relative mx-auto bg-white shadow-md"
+          className="relative mx-auto border border-hairline bg-card"
           style={{ width: targetWidth }}
         >
           {file.kind === "pdf" ? (
@@ -185,12 +185,12 @@ export function DocumentPageView({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={file.imageUrl}
-              alt="Dokumen asli"
-              className="block w-full h-auto select-none"
+              alt="Original document"
+              className="block h-auto w-full select-none"
               draggable={false}
             />
           )}
-          {/* Overlay shares the page box exactly, so % coordinates map 1:1 to the page image. */}
+          {/* The overlay shares the page box exactly, so % coordinates map 1:1 to the page image. */}
           <div className="absolute inset-0">
             {pageBoxes.map((b) => (
               <button
@@ -199,7 +199,7 @@ export function DocumentPageView({
                 title={b.title}
                 aria-label={b.title}
                 onClick={() => onBoxClick(b.id)}
-                className={`absolute border-2 rounded-[2px] transition-colors cursor-pointer ${TONE_CLASS[b.tone]}`}
+                className={`absolute rounded-[2px] border-2 transition-colors cursor-pointer ${TONE_CLASS[b.tone]}`}
                 style={{
                   left: `${b.x1 * 100}%`,
                   top: `${b.y1 * 100}%`,

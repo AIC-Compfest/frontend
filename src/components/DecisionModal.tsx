@@ -5,18 +5,10 @@ import { ShipmentEvent } from "@/types/reconciliation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  X,
-  ShieldAlert,
-  Loader2,
-  FileText,
-} from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatIDR } from "@/lib/format";
+import { btnOutline, focusRing, selectClass, textareaClass } from "@/lib/dashboard-ui";
 
 interface DecisionModalProps {
   isOpen: boolean;
@@ -40,7 +32,7 @@ export function DecisionModal({
 
   if (!isOpen || !action || !event) return null;
 
-  // Defensive programming: Handle missing invoice/pricing data
+  // Defensive: handle missing invoice and pricing data
   const invoice = event.invoice || {};
   const pricing = event.pricing || {};
   const invoiceNumber = invoice?.invoice_number || "N/A";
@@ -49,17 +41,9 @@ export function DecisionModal({
   const differenceAmount = pricing?.difference_amount ?? 0;
   const vendorId = event?.vendor_id || "N/A";
 
-  const formatIDR = (val: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(val);
-  };
-
   const handleConfirm = async () => {
     if ((action === "DISPUTE" || action === "REJECT") && !reason.trim()) {
-      setErrorMsg("Sanggahan atau penolakan wajib mencantumkan alasan tertulis.");
+      setErrorMsg("Disputes and rejections require a written reason.");
       return;
     }
 
@@ -69,101 +53,100 @@ export function DecisionModal({
       await onConfirm(action, role, reason);
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal menyimpan keputusan review.";
+      const msg = err instanceof Error ? err.message : "Failed to save the review decision.";
       setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const title =
+    action === "APPROVE"
+      ? "Confirm invoice approval (Approve)"
+      : action === "DISPUTE"
+      ? "Submit dispute claim (Dispute)"
+      : "Confirm invoice rejection (Reject)";
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <Card className="max-w-lg w-full bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-0">
-        {/* Modal Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-lg overflow-hidden rounded-card border border-hairline bg-card p-0 text-ink shadow-drawer">
+        {/* Modal header */}
         <CardHeader
           className={cn(
-            "p-5 pb-4 border-b flex flex-row items-center justify-between",
+            "flex flex-row items-center justify-between border-b p-5 pb-4",
             action === "APPROVE"
-              ? "bg-emerald-50/70 border-emerald-100"
+              ? "border-teal/40 bg-teal-soft/70"
               : action === "DISPUTE"
-              ? "bg-rose-50/70 border-rose-100"
-              : "bg-slate-50 border-slate-200"
+              ? "border-error/40 bg-error-soft/70"
+              : "border-hairline bg-surface-soft"
           )}
         >
           <div className="flex items-center gap-2.5">
             <div
               className={cn(
-                "p-1.5 rounded-lg flex items-center justify-center text-white",
-                action === "APPROVE"
-                  ? "bg-emerald-600"
-                  : action === "DISPUTE"
-                  ? "bg-rose-600"
-                  : "bg-slate-800"
+                "flex items-center justify-center rounded-plate p-1.5 text-white",
+                action === "APPROVE" ? "bg-teal-ink" : action === "DISPUTE" ? "bg-error-ink" : "bg-navy"
               )}
             >
-              {action === "APPROVE" && <CheckCircle2 className="h-4 w-4" />}
-              {action === "DISPUTE" && <AlertTriangle className="h-4 w-4" />}
-              {action === "REJECT" && <XCircle className="h-4 w-4" />}
+              {action === "APPROVE" && <CheckCircle2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />}
+              {action === "DISPUTE" && <AlertTriangle className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />}
+              {action === "REJECT" && <XCircle className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />}
             </div>
             <div>
-              <CardTitle className="text-sm font-extrabold text-slate-900">
-                {action === "APPROVE" && "Konfirmasi Persetujuan Faktur (Approve)"}
-                {action === "DISPUTE" && "Pengajuan Sanggahan Sengketa (Dispute)"}
-                {action === "REJECT" && "Konfirmasi Penolakan Tagihan (Reject)"}
-              </CardTitle>
-              <CardDescription className="text-[11px] text-slate-500 mt-0.5">
-                Pencatatan otoritas reviewer ke Audit Ledger permanen
+              <CardTitle className="font-display text-[16px] font-normal tracking-normal text-ink">{title}</CardTitle>
+              <CardDescription className="mt-0.5 text-[12px] text-body">
+                The reviewer decision is recorded permanently in the Audit Ledger Trail.
               </CardDescription>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors"
+            aria-label="Close"
+            className={cn("rounded-pop p-1 text-muted transition-colors hover:bg-white/80 hover:text-ink", focusRing)}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
           </button>
         </CardHeader>
 
-        {/* Modal Body */}
-        <CardContent className="p-5 space-y-4 text-xs">
-          {/* Summary Box */}
-          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 font-sans">
-            <div className="flex justify-between">
-              <span className="text-slate-500">Nomor Faktur (Invoice):</span>
-              <span className="font-mono font-bold text-slate-900">{invoiceNumber}</span>
+        {/* Modal body */}
+        <CardContent className="space-y-4 p-5 text-[13px]">
+          {/* Summary */}
+          <div className="space-y-2 rounded-control border border-hairline bg-canvas p-3.5">
+            <div className="flex justify-between gap-3">
+              <span className="text-body">Invoice number:</span>
+              <span className="font-semibold tabular-nums text-ink">{invoiceNumber}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Transporter / Vendor:</span>
-              <span className="font-semibold text-slate-800">{vendorId}</span>
+            <div className="flex justify-between gap-3">
+              <span className="text-body">Logistics partner:</span>
+              <span className="font-semibold text-ink">{vendorId}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Total Tagihan (Billed):</span>
-              <span className="font-mono font-bold text-slate-900">{formatIDR(billedAmount)}</span>
+            <div className="flex justify-between gap-3">
+              <span className="text-body">Billed total:</span>
+              <span className="font-semibold tabular-nums text-ink">{formatIDR(billedAmount)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Total Sah Terkontrak (Expected):</span>
-              <span className="font-mono font-bold text-[#243A5E]">
-                {formatIDR(expectedAmount)}
-              </span>
+            <div className="flex justify-between gap-3">
+              <span className="text-body">Expected total (agreed rate):</span>
+              <span className="font-semibold tabular-nums text-navy">{formatIDR(expectedAmount)}</span>
             </div>
             {differenceAmount > 0 && (
-              <div className="flex justify-between pt-2 border-t border-slate-200">
-                <span className="text-rose-700 font-bold">Selisih Klaim Sengketa:</span>
-                <span className="font-mono font-extrabold text-rose-700">
-                  +{formatIDR(differenceAmount)}
-                </span>
+              <div className="flex justify-between gap-3 border-t border-hairline pt-2">
+                <span className="font-semibold text-error-ink">Disputed variance:</span>
+                <span className="font-semibold tabular-nums text-error-ink">+{formatIDR(differenceAmount)}</span>
               </div>
             )}
           </div>
 
-          {/* Role Selector */}
+          {/* Reviewer role */}
           <div className="space-y-1.5">
-            <Label htmlFor="decision-role">Peran Otorisator (Reviewer Role)</Label>
+            <Label htmlFor="decision-role" className="text-[12px] text-ink">
+              Reviewer role
+            </Label>
             <select
               id="decision-role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full text-xs text-slate-800 font-semibold bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#243A5E]"
+              className={cn(selectClass, "w-full font-semibold")}
             >
               <option value="AP_MANAGER">Accounts Payable Manager (AP_MANAGER)</option>
               <option value="FINANCE_CONTROLLER">Finance Controller (FINANCE_CONTROLLER)</option>
@@ -171,64 +154,64 @@ export function DecisionModal({
             </select>
           </div>
 
-          {/* Reason Text Area */}
+          {/* Reason */}
           <div className="space-y-1.5">
-            <Label htmlFor="decision-reason">
-              Catatan / Dasar Keputusan {action !== "APPROVE" && <span className="text-rose-600">*</span>}
+            <Label htmlFor="decision-reason" className="text-[12px] text-ink">
+              Notes / basis for decision {action !== "APPROVE" && <span className="text-error-ink">*</span>}
             </Label>
             <textarea
               id="decision-reason"
               rows={3}
               placeholder={
                 action === "APPROVE"
-                  ? "Tambahkan catatan persetujuan opsional..."
-                  : "Uraikan dasar sanggahan sesuai klausul tarif atau bukti fisik..."
+                  ? "Add an optional approval note..."
+                  : "Describe the basis for the dispute, citing the rate clause or physical evidence..."
               }
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full text-xs text-slate-800 placeholder-slate-400 bg-white border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-[#243A5E]"
+              className={cn(textareaClass, "w-full p-2.5 text-[13px] placeholder:text-muted")}
             />
           </div>
 
           {errorMsg && (
-            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
+            <div role="alert" className="flex items-center gap-2 rounded-control border border-error/40 bg-error-soft p-2.5 text-[13px] font-semibold text-error-ink">
+              <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
               <span>{errorMsg}</span>
             </div>
           )}
         </CardContent>
 
-        {/* Modal Footer */}
-        <CardFooter className="p-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-end gap-2.5">
+        {/* Modal footer */}
+        <CardFooter className="flex items-center justify-end gap-2.5 border-t border-hairline bg-surface-soft/60 p-4">
           <Button
+            type="button"
             variant="outline"
-            size="sm"
             onClick={onClose}
             disabled={isSubmitting}
-            className="text-xs"
+            className={cn(btnOutline, "h-9 px-4 text-[13px]")}
           >
-            Batal
+            Cancel
           </Button>
           <Button
-            size="sm"
+            type="button"
             onClick={handleConfirm}
             disabled={isSubmitting}
             className={cn(
-              "text-xs font-bold text-white shadow-xs",
+              "h-9 px-4 text-[13px] font-semibold text-white shadow-none",
               action === "APPROVE"
-                ? "bg-emerald-600 hover:bg-emerald-700"
+                ? "bg-teal-ink hover:opacity-90"
                 : action === "DISPUTE"
-                ? "bg-rose-600 hover:bg-rose-700"
-                : "bg-slate-800 hover:bg-slate-900"
+                ? "bg-error-ink hover:opacity-90"
+                : "bg-navy hover:bg-navy-deep"
             )}
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Menyimpan...</span>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.75} aria-hidden="true" />
+                <span>Saving...</span>
               </>
             ) : (
-              "Konfirmasi Keputusan"
+              "Confirm decision"
             )}
           </Button>
         </CardFooter>

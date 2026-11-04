@@ -4,19 +4,11 @@ import React, { useState, useEffect } from "react";
 import { DisputePackage } from "@/types/reconciliation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { getDisputePackage } from "@/lib/api";
-import { Separator } from "@/components/ui/separator";
-import {
-  FileText,
-  Download,
-  Printer,
-  X,
-  ShieldCheck,
-  Loader2,
-  AlertCircle,
-  FileCheck2,
-} from "lucide-react";
+import { formatIDR } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { btnOutline, btnPrimary, focusRing } from "@/lib/dashboard-ui";
+import { AlertCircle, Download, FileCheck2, Loader2, Printer, X } from "lucide-react";
 
 interface DisputePackageModalProps {
   isOpen: boolean;
@@ -47,7 +39,7 @@ export function DisputePackageModal({
         }
       } catch (err: unknown) {
         if (isMounted) {
-          const msg = err instanceof Error ? err.message : "Gagal memuat paket sengketa.";
+          const msg = err instanceof Error ? err.message : "Failed to load the dispute package.";
           setErrorMsg(msg);
           setIsLoading(false);
         }
@@ -79,72 +71,71 @@ export function DisputePackageModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <Card className="max-w-3xl w-full max-h-[90vh] flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-sm">
+      <Card className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-card border border-hairline bg-card p-0 text-ink shadow-drawer">
         {/* Header */}
-        <CardHeader className="p-4 pb-3 border-b border-slate-100 bg-[#EDF4FA]/70 flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-hairline bg-surface-soft/70 p-4 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-[#243A5E] text-[#8FB8D6]">
-              <FileCheck2 className="h-4 w-4" />
+            <div className="rounded-plate bg-navy p-1.5 text-navy-muted">
+              <FileCheck2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
             </div>
             <div>
-              <CardTitle className="text-sm font-extrabold text-[#243A5E]">
+              <CardTitle className="font-display text-[16px] font-normal tracking-normal text-navy">
                 Official 3PL billing dispute claim package
               </CardTitle>
-              <CardDescription className="text-[11px] text-slate-500">
-                Official claim memo with MSA contractual clauses & trace logs
+              <CardDescription className="mt-0.5 text-[12px] text-body">
+                Official claim memo with MSA contractual clauses and trace logs
               </CardDescription>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors"
+            aria-label="Close"
+            className={cn("rounded-pop p-1 text-muted transition-colors hover:bg-white/80 hover:text-ink", focusRing)}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
           </button>
         </CardHeader>
 
         {/* Body */}
-        <CardContent className="flex-1 p-5 overflow-y-auto space-y-4">
+        <CardContent className="flex-1 space-y-4 overflow-y-auto p-5">
           {isLoading ? (
-            <div className="py-16 text-center text-[#5F86A6] text-xs">
-              <Loader2 className="h-6 w-6 animate-spin text-[#243A5E] mx-auto mb-2" />
-              Mengompilasi paket klaim hukum dan jejak bukti...
+            <div className="flex flex-col items-center gap-2 py-16 text-center text-[13px] text-body">
+              <Loader2 className="h-6 w-6 animate-spin text-navy" strokeWidth={1.75} aria-hidden="true" />
+              <span>Compiling the claim package and evidence trail...</span>
             </div>
           ) : errorMsg ? (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
+            <div role="alert" className="flex items-center gap-2 rounded-control border border-error/40 bg-error-soft p-3 text-[13px] text-error-ink">
+              <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
               <span>{errorMsg}</span>
             </div>
           ) : pkg ? (
             <div className="space-y-4">
-              {/* Formatted Memo Box */}
-              <div className="p-4 bg-slate-950 text-emerald-400 font-mono text-xs rounded-xl border border-slate-800 whitespace-pre-wrap leading-relaxed shadow-inner overflow-x-auto">
+              {/* Formatted memo. Monospace is kept because the memo is aligned plain text. */}
+              <div className="overflow-x-auto whitespace-pre-wrap rounded-control border border-navy-deep bg-navy-deep p-4 font-mono text-[12px] leading-relaxed text-navy-soft">
                 {pkg.formatted_memo}
               </div>
 
-              {/* Structured Discrepancy Breakdown */}
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
-                <div className="font-bold text-[#243A5E] uppercase tracking-wider text-[11px] flex items-center justify-between">
-                  <span>Rincian Diskrepansi Terlampir ({pkg.discrepancies?.length || 0})</span>
-                  <Badge variant="destructive" className="text-[9px] py-0">
-                    MSA ENFORCED
-                  </Badge>
+              {/* Discrepancy breakdown */}
+              <div className="space-y-2 rounded-control border border-hairline bg-canvas p-3.5 text-[13px]">
+                <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[.08em] text-navy">
+                  <span>Attached discrepancy details ({pkg.discrepancies?.length || 0})</span>
                 </div>
                 {pkg.discrepancies?.map((disc, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center text-xs"
+                    className="flex items-center justify-between gap-3 rounded-control border border-hairline bg-card p-2.5 text-[13px]"
                   >
                     <div>
-                      <span className="font-mono font-bold text-rose-700">{disc.code}</span>:{" "}
-                      <span className="text-slate-700">{disc.description}</span>
+                      <span className="font-semibold tabular-nums text-error-ink">{disc.code}</span>:{" "}
+                      <span className="text-body">{disc.description}</span>
                     </div>
-                    {disc.delta_amount && (
-                      <span className="font-mono font-bold text-rose-700 whitespace-nowrap ml-2">
-                        +Rp {disc.delta_amount.toLocaleString("id-ID")}
+                    {disc.delta_amount ? (
+                      <span className="ml-2 whitespace-nowrap font-semibold tabular-nums text-error-ink">
+                        +{formatIDR(disc.delta_amount)}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -152,27 +143,18 @@ export function DisputePackageModal({
           ) : null}
         </CardContent>
 
-        {/* Footer Actions */}
-        <CardFooter className="p-4 border-t border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <span className="text-[11px] text-slate-500 font-medium">
+        {/* Footer */}
+        <CardFooter className="flex flex-col items-start justify-between gap-3 border-t border-hairline bg-surface-soft/60 p-4 sm:flex-row sm:items-center">
+          <span className="text-[12px] text-body">
             Legal claim package compliant with Master Service Agreement terms.
           </span>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrintMemo}
-              className="text-xs font-semibold gap-1.5 h-8 bg-white"
-            >
-              <Printer className="h-3.5 w-3.5" />
+            <Button type="button" variant="outline" onClick={handlePrintMemo} className={cn(btnOutline, "h-8 px-3 text-[12px]")}>
+              <Printer className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
               <span>Print / Export PDF</span>
             </Button>
-            <Button
-              size="sm"
-              onClick={handleDownloadJSON}
-              className="bg-[#243A5E] text-white hover:bg-[#1C2E4A] font-bold text-xs gap-1.5 h-8 shadow-xs"
-            >
-              <Download className="h-3.5 w-3.5" />
+            <Button type="button" onClick={handleDownloadJSON} className={cn(btnPrimary, "h-8 px-3 text-[12px]")}>
+              <Download className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
               <span>Download JSON</span>
             </Button>
           </div>

@@ -153,7 +153,7 @@ export function InteractiveSimulator({
                 <div className="flex items-center justify-between border-b border-[#CDDBE8] pb-5">
                   <div>
                     <span className="font-mono text-[10px] uppercase tracking-widest text-[#7C879C]">
-                      Live case
+                      Example case
                     </span>
                     <h3 className="mt-2 font-display text-3xl tracking-normal text-[#12203A]">
                       {selectedScenario.name}

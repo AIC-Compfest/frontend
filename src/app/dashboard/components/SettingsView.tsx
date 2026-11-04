@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Save, RotateCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Save } from "lucide-react";
 import { getSettings, updateSettings } from "@/lib/api";
+import { formatIDR } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { btnPrimary, inputClass, panel, panelHeader, panelTitle } from "@/lib/dashboard-ui";
 
 export function SettingsView() {
   const [materialityRp, setMaterialityRp] = useState("50000");
@@ -37,7 +39,7 @@ export function SettingsView() {
         }
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal memuat setting kebijakan");
+      setError(err instanceof Error ? err.message : "Failed to load policy settings");
     } finally {
       setLoading(false);
     }
@@ -61,110 +63,117 @@ export function SettingsView() {
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan setting kebijakan");
+      setError(err instanceof Error ? err.message : "Failed to save policy settings");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="w-full space-y-6">
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg font-medium">
-          {error}
+        <div role="alert" className="flex items-center gap-2 rounded-control border border-error/40 bg-error-soft p-3.5 text-[13px] font-medium text-error-ink">
+          <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+          <span>{error}</span>
         </div>
       )}
 
-      <Card className="border border-slate-200 shadow-sm bg-white">
-        <CardHeader className="pb-3 border-b border-slate-100">
-          <CardTitle className="text-base font-bold text-slate-900">
-            Enterprise financial tolerance gates
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Discrepancies below these thresholds are recorded and evaluated deterministically.
-          </CardDescription>
-        </CardHeader>
+      <section className={cn(panel, "overflow-hidden")}>
+        <header className={panelHeader}>
+          <div className="space-y-1">
+            <h2 className={panelTitle}>Tolerance Gates</h2>
+            <p className="text-[13px] text-body">
+              Discrepancies below these thresholds are recorded and evaluated deterministically.
+            </p>
+          </div>
+        </header>
 
-        <CardContent className="space-y-5 pt-5">
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="mat-rp">Materiality Threshold (IDR)</Label>
-                <Input
-                  id="mat-rp"
-                  value={materialityRp}
-                  onChange={(e) => setMaterialityRp(e.target.value)}
-                  placeholder="50000"
-                />
-                <span className="text-[10px] text-slate-400">
-                  Variances &le; Rp {parseInt(materialityRp || "0", 10).toLocaleString("id-ID")} are flagged as minor
-                </span>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="mat-pct">Materiality Percentage (%)</Label>
-                <Input
-                  id="mat-pct"
-                  value={materialityPct}
-                  onChange={(e) => setMaterialityPct(e.target.value)}
-                  placeholder="2.0"
-                />
-                <span className="text-[10px] text-slate-400">
-                  Variances &le; {materialityPct}% of invoice total
-                </span>
-              </div>
+        <form onSubmit={handleSave} className="space-y-6 p-6">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="mat-rp" className="text-[13px] text-ink">
+                Materiality Threshold (IDR)
+              </Label>
+              <Input
+                id="mat-rp"
+                value={materialityRp}
+                onChange={(e) => setMaterialityRp(e.target.value)}
+                placeholder="50000"
+                className={inputClass}
+              />
+              <p className="text-[12px] text-body">
+                Variances ≤ {formatIDR(parseInt(materialityRp || "0", 10))} are flagged as minor
+              </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4 pt-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="weight-tol">Scale Weight Tolerance (kg)</Label>
-                <Input
-                  id="weight-tol"
-                  value={weightTolerance}
-                  onChange={(e) => setWeightTolerance(e.target.value)}
-                  placeholder="0.5"
-                />
-                <span className="text-[10px] text-slate-400">
-                  Discrepancy tolerance between warehouse scale and 3PL billed weight
-                </span>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="disp-days">Dispute Urgency Alert (Days)</Label>
-                <Input
-                  id="disp-days"
-                  value={disputeAlertDays}
-                  onChange={(e) => setDisputeAlertDays(e.target.value)}
-                  placeholder="7"
-                />
-                <span className="text-[10px] text-slate-400">
-                  Transactions with &le; {disputeAlertDays} days remaining are boosted in priority queue
-                </span>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="mat-pct" className="text-[13px] text-ink">
+                Materiality Percentage (%)
+              </Label>
+              <Input
+                id="mat-pct"
+                value={materialityPct}
+                onChange={(e) => setMaterialityPct(e.target.value)}
+                placeholder="2.0"
+                className={inputClass}
+              />
+              <p className="text-[12px] text-body">Variances ≤ {materialityPct}% of invoice total</p>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-              {isSaved ? (
-                <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  <span>Kebijakan rekonsiliasi berhasil disimpan!</span>
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="weight-tol" className="text-[13px] text-ink">
+                Scale Weight Tolerance (kg)
+              </Label>
+              <Input
+                id="weight-tol"
+                value={weightTolerance}
+                onChange={(e) => setWeightTolerance(e.target.value)}
+                placeholder="0.5"
+                className={inputClass}
+              />
+              <p className="text-[12px] text-body">
+                Discrepancy tolerance between warehouse scale and 3PL billed weight
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="disp-days" className="text-[13px] text-ink">
+                Dispute Urgency Alert (Days)
+              </Label>
+              <Input
+                id="disp-days"
+                value={disputeAlertDays}
+                onChange={(e) => setDisputeAlertDays(e.target.value)}
+                placeholder="7"
+                className={inputClass}
+              />
+              <p className="text-[12px] text-body">
+                Transactions with ≤ {disputeAlertDays} days remaining are boosted in priority queue
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 border-t border-hairline pt-5 sm:flex-row sm:items-center sm:justify-between">
+            {isSaved ? (
+              <div role="status" className="flex items-center gap-1.5 text-[13px] font-semibold text-teal-ink">
+                <CheckCircle2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+                <span>Reconciliation policy saved.</span>
+              </div>
+            ) : (
+              <span className="text-[13px] text-body">Policy changes take effect immediately across all active workers.</span>
+            )}
+
+            <Button type="submit" disabled={loading} className={cn(btnPrimary, "h-9 px-4")}>
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} aria-hidden="true" />
               ) : (
-                <span className="text-xs text-slate-400">Policy changes take effect immediately across all active workers.</span>
+                <Save className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
               )}
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-[#243A5E] text-white hover:bg-[#1C2E4A] font-bold text-xs gap-1.5"
-              >
-                <Save className="h-4 w-4" />
-                <span>{loading ? "Menyimpan..." : "Save Policy Config"}</span>
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              <span>{loading ? "Saving..." : "Save Policy Config"}</span>
+            </Button>
+          </div>
+        </form>
+      </section>
     </div>
   );
 }
