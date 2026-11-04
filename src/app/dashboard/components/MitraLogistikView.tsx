@@ -1,22 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { API_V1 } from "@/lib/config";
-import {
-  Calendar,
-  RotateCw,
-  Building2,
-  FileText,
-  CheckCircle2,
-  Truck,
-  Phone,
-  Mail,
-  DollarSign,
-  AlertCircle,
-} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { chip, iconPlate, kpiValue, label, panel, emptyState } from "@/lib/dashboard-ui";
+import { AlertCircle, Building2, Calendar, DollarSign, FileText, Loader2, Mail, Phone, Truck } from "lucide-react";
 import { getContracts, ContractItem } from "@/lib/api";
 
 const API_BASE = API_V1;
@@ -70,7 +58,7 @@ export function MitraLogistikView() {
         ),
       }));
 
-      // If no vendors from API, fall back to contracts data
+      // If the vendor API returns nothing, fall back to the contracts data
       if (merged.length === 0 && contracts.length > 0) {
         setMitras(
           contracts.map((c) => ({
@@ -84,7 +72,7 @@ export function MitraLogistikView() {
         setMitras(merged);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data mitra logistik");
+      setError(err instanceof Error ? err.message : "Failed to load logistics partner data");
     } finally {
       setLoading(false);
     }
@@ -96,156 +84,127 @@ export function MitraLogistikView() {
 
   const activeMitras = mitras.filter((m) => m.is_active !== false);
 
+  const stats = [
+    { label: "Active logistics partners", value: activeMitras.length },
+    { label: "Rate agreements (PKS) linked", value: mitras.filter((m) => m.contract).length },
+    { label: "No rate agreement (PKS)", value: mitras.filter((m) => !m.contract).length },
+  ];
+
   return (
-    <div className="space-y-6 font-sans max-w-7xl">
-      {/* Stats Banner - 3 White KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
-          <CardHeader className="p-4 pb-2 space-y-1">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-slate-600" />
-              <span className="text-xs font-medium text-slate-600">Mitra 3PL Aktif</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900">{activeMitras.length}</div>
-          </CardHeader>
-        </Card>
-        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
-          <CardHeader className="p-4 pb-2 space-y-1">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-slate-600" />
-              <span className="text-xs font-medium text-slate-600">PKS Terhubung</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900">
-              {mitras.filter((m) => m.contract).length}
-            </div>
-          </CardHeader>
-        </Card>
-        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl">
-          <CardHeader className="p-4 pb-2 space-y-1">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-slate-600" />
-              <span className="text-xs font-medium text-slate-600">Tanpa Kontrak PKS</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900">
-              {mitras.filter((m) => !m.contract).length}
-            </div>
-          </CardHeader>
-        </Card>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {stats.map((stat) => (
+          <div key={stat.label} className={cn(panel, "space-y-3 p-5")}>
+            <span className={label}>{stat.label}</span>
+            <div className={kpiValue}>{stat.value}</div>
+          </div>
+        ))}
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium">
-          {error}
+        <div role="alert" className="flex items-center gap-2 rounded-control border border-error/40 bg-error-soft p-3.5 text-[13px] font-medium text-error-ink">
+          <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+          <span>{error}</span>
         </div>
       )}
 
       {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400 space-y-2">
-          <div className="animate-spin w-6 h-6 border-2 border-[#1B2A4A] border-t-transparent rounded-full mx-auto" />
-          <span>Memuat data mitra logistik...</span>
+        <div className="flex items-center justify-center gap-2 px-6 py-16 text-[13px] text-body">
+          <Loader2 className="h-4 w-4 animate-spin text-navy" strokeWidth={1.75} aria-hidden="true" />
+          <span>Loading logistics partner data...</span>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {mitras.map((m) => (
-            <Card
-              key={m.vendor_id}
-              className="border border-slate-200 shadow-2xs hover:shadow-sm hover:border-sky-300 transition-all bg-white rounded-2xl overflow-hidden"
-            >
-              {/* Card Header */}
-              <CardHeader className="p-4 pb-3 border-b border-slate-100 bg-slate-50/60 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="h-9 w-9 rounded-xl bg-[#1B2A4A] text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <Truck className="h-4.5 w-4.5" />
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {mitras.map((m) => {
+            const isActive = m.is_active !== false;
+            return (
+              <article key={m.vendor_id} className={cn(panel, "flex flex-col overflow-hidden")}>
+                <div className="flex items-start justify-between gap-3 border-b border-hairline px-5 py-4">
+                  <div className="min-w-0 space-y-1">
+                    <span className="block text-[16px] font-semibold leading-snug text-ink">{m.vendor_name}</span>
+                    <span className="block text-[12px] font-medium tabular-nums text-muted">{m.vendor_id}</span>
                   </div>
-                  <Badge
-                    variant={m.is_active !== false ? "success" : "outline"}
-                    className="text-[9px] py-0 font-bold shrink-0 mt-0.5"
-                  >
-                    {m.is_active !== false ? "AKTIF" : "NON-AKTIF"}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className={iconPlate("navy")}>
+                      <Truck className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                    <span className={chip(isActive ? "success" : "neutral")}>{isActive ? "Active" : "Inactive"}</span>
+                  </div>
                 </div>
-                <div className="space-y-0.5">
-                  <CardTitle className="text-sm font-extrabold text-slate-900 leading-tight">
-                    {m.vendor_name}
-                  </CardTitle>
-                  <span className="font-mono text-[10px] text-slate-400 font-semibold">{m.vendor_id}</span>
+
+                <div className="flex flex-1 flex-col gap-4 px-5 py-4 text-[13px]">
+                  {(m.contact_email || m.contact_phone || m.city) && (
+                    <div className="space-y-2 text-body">
+                      {m.contact_email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5 shrink-0 text-muted" strokeWidth={1.75} aria-hidden="true" />
+                          <span className="truncate">{m.contact_email}</span>
+                        </div>
+                      )}
+                      {m.contact_phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5 shrink-0 text-muted" strokeWidth={1.75} aria-hidden="true" />
+                          <span className="tabular-nums">{m.contact_phone}</span>
+                        </div>
+                      )}
+                      {m.city && (
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-3.5 w-3.5 shrink-0 text-muted" strokeWidth={1.75} aria-hidden="true" />
+                          <span>{m.city}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {m.contract ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5 text-body" strokeWidth={1.75} aria-hidden="true" />
+                        <span className={label}>Active rate agreement (PKS)</span>
+                      </div>
+
+                      <dl className="space-y-2 rounded-control border border-hairline bg-canvas p-3.5 text-[12px]">
+                        <div className="flex items-center justify-between gap-3">
+                          <dt className="text-body">Agreement ID</dt>
+                          <dd className="font-semibold tabular-nums text-navy">{m.contract.agreement_id || m.contract.id}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt className="flex items-center gap-1 text-body">
+                            <Calendar className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                            Effective period
+                          </dt>
+                          <dd className="font-semibold tabular-nums text-ink">{m.contract.effective_range}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt className="flex items-center gap-1 text-body">
+                            <DollarSign className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                            Fuel surcharge cap
+                          </dt>
+                          <dd className="font-semibold tabular-nums text-navy">{m.contract.fuel_surcharge_cap}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt className="text-body">Dispute window</dt>
+                          <dd className="font-semibold tabular-nums text-warning-ink">{m.contract.dispute_window}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  ) : (
+                    <div className="mt-auto flex items-start gap-2 rounded-control border border-warning/40 bg-warning-soft p-3 text-[12px] text-warning-ink">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                      <span>No rate agreement (PKS) is linked to this partner yet.</span>
+                    </div>
+                  )}
                 </div>
-              </CardHeader>
-
-              {/* Card Content */}
-              <CardContent className="p-4 space-y-3 text-xs">
-                {/* Contact Info */}
-                {(m.contact_email || m.contact_phone) && (
-                  <div className="space-y-1.5">
-                    {m.contact_email && (
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Mail className="h-3 w-3 text-slate-400 shrink-0" />
-                        <span className="truncate text-[11px]">{m.contact_email}</span>
-                      </div>
-                    )}
-                    {m.contact_phone && (
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Phone className="h-3 w-3 text-slate-400 shrink-0" />
-                        <span className="text-[11px]">{m.contact_phone}</span>
-                      </div>
-                    )}
-                    {m.city && (
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Building2 className="h-3 w-3 text-slate-400 shrink-0" />
-                        <span className="text-[11px]">{m.city}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Contract / PKS Details */}
-                {m.contract ? (
-                  <div className="pt-2 border-t border-slate-100 space-y-2">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      <FileText className="h-3 w-3" />
-                      Kontrak PKS Aktif
-                    </div>
-
-                    <div className="bg-sky-50/60 border border-sky-100 rounded-xl p-2.5 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500">ID Perjanjian:</span>
-                        <span className="font-mono text-[10px] font-bold text-[#243A5E]">
-                          {m.contract.agreement_id || m.contract.id}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-[10px] text-slate-500">
-                          <Calendar className="h-3 w-3" /> Masa Berlaku:
-                        </span>
-                        <span className="font-mono text-[11px] font-semibold">{m.contract.effective_range}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-[10px] text-slate-500">
-                          <DollarSign className="h-3 w-3" /> Fuel Surcharge:
-                        </span>
-                        <span className="font-bold text-[#243A5E] text-[11px]">{m.contract.fuel_surcharge_cap}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500">Dispute Window:</span>
-                        <span className="font-bold text-amber-700 text-[11px]">{m.contract.dispute_window}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="pt-2 border-t border-slate-100">
-                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-700 flex items-center gap-2">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      <span>Belum ada kontrak PKS terhubung untuk mitra ini.</span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+              </article>
+            );
+          })}
 
           {mitras.length === 0 && !loading && (
-            <div className="col-span-3 p-12 text-center text-xs text-slate-400">
-              Belum ada mitra logistik terdaftar. Tambahkan data vendor di tabel vendors.
+            <div className={cn(panel, "md:col-span-2 xl:col-span-3")}>
+              <div className={emptyState}>
+                <Truck className="h-8 w-8 text-muted" strokeWidth={1.5} aria-hidden="true" />
+                <p>No logistics partners are registered yet. Add vendor records to the vendors table.</p>
+              </div>
             </div>
           )}
         </div>

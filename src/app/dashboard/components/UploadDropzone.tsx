@@ -1,29 +1,43 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { API_V1 } from "@/lib/config";
+import { cn } from "@/lib/utils";
 import {
-  UploadCloud,
-  FileText,
-  CheckCircle2,
+  btnGhost,
+  btnOutline,
+  btnPrimary,
+  chip,
+  emptyState,
+  focusRing,
+  iconPlate,
+  panel,
+  panelHeader,
+  panelTitle,
+  selectClass,
+  td,
+  th,
+} from "@/lib/dashboard-ui";
+import {
   AlertCircle,
-  Loader2,
-  Sparkles,
-  Trash2,
-  FileImage,
-  Layers,
-  Plus,
-  Download,
-  RotateCw,
-  FileCheck2,
-  Folder,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Download,
+  FileCheck2,
+  FileImage,
+  FileText,
+  Folder,
+  Layers,
+  Loader2,
+  Plus,
+  RotateCw,
+  Sparkles,
+  Trash2,
+  UploadCloud,
 } from "lucide-react";
-import { BatchHitlReviewModal_Compact } from "./BatchHitlReviewModal_Compact";
+import { BatchHitlReviewModal } from "./BatchHitlReviewModal";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_SIZE_MB = 10;
@@ -58,6 +72,28 @@ interface SavedDocItem {
   ingest_batch_id?: string;
 }
 
+// Helper to format file size in B, KB, or MB
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+// Helper to detect the default classification from the file name. Keep these substring rules as they are.
+const detectDocType = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower.includes("sj") || lower.includes("surat_jalan") || lower.includes("do_")) {
+    return "SURAT_JALAN";
+  }
+  if (lower.includes("pod") || lower.includes("bukti") || lower.includes("tanda_terima")) {
+    return "POD";
+  }
+  if (lower.includes("pks") || lower.includes("rate") || lower.includes("kontrak") || lower.includes("agreement")) {
+    return "RATE_AGREEMENT";
+  }
+  return "AUTO";
+};
+
 export function UploadDropzone() {
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
   const [isBatchUploading, setIsBatchUploading] = useState(false);
@@ -68,23 +104,16 @@ export function UploadDropzone() {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [reviewDocumentIds, setReviewDocumentIds] = useState<string[] | null>(null);
 
-  // Saved documents in Supabase DB state
+  // Saved documents in the database
   const [savedDocs, setSavedDocs] = useState<SavedDocItem[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
 
-  // Helper to format file size in KB or MB
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
-
-  // Fetch recent documents from Supabase via backend API
+  // Fetch recent documents from the backend API
   const fetchRecentDocs = useCallback(async () => {
     try {
       setIsLoadingDocs(true);
       const res = await fetch(`${API_BASE}/documents?page_size=30`);
-      if (!res.ok) throw new Error("Gagal mengambil data dokumen");
+      if (!res.ok) throw new Error("Failed to load documents");
       const json = await res.json();
       setSavedDocs(json.data || []);
     } catch (err) {
@@ -98,22 +127,7 @@ export function UploadDropzone() {
     fetchRecentDocs();
   }, [fetchRecentDocs]);
 
-  // Helper to detect default classification from file name
-  const detectDocType = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes("sj") || lower.includes("surat_jalan") || lower.includes("do_")) {
-      return "SURAT_JALAN";
-    }
-    if (lower.includes("pod") || lower.includes("bukti") || lower.includes("tanda_terima")) {
-      return "POD";
-    }
-    if (lower.includes("pks") || lower.includes("rate") || lower.includes("kontrak") || lower.includes("agreement")) {
-      return "RATE_AGREEMENT";
-    }
-    return "AUTO";
-  };
-
-  // Add files to queue with 10 MB max size validation
+  // Add files to the queue. Files over 10 MB are flagged as errors.
   const handleFilesAdded = (files: FileList | File[]) => {
     setGlobalError(null);
     const newItems: QueuedFile[] = [];
@@ -126,7 +140,7 @@ export function UploadDropzone() {
         docType: detectDocType(f.name),
         status: isSizeExceeded ? "ERROR" : "READY",
         errorMsg: isSizeExceeded
-          ? `Ukuran file (${(f.size / (1024 * 1024)).toFixed(1)} MB) melebihi batas maksimal 10 MB`
+          ? `File size (${(f.size / (1024 * 1024)).toFixed(1)} MB) exceeds the ${MAX_FILE_SIZE_MB} MB limit`
           : undefined,
       });
     });
@@ -174,13 +188,13 @@ export function UploadDropzone() {
     );
   };
 
-  // Upload single file to backend API
+  // Upload one file to the backend API
   const uploadSingleItem = async (item: QueuedFile): Promise<QueuedFile> => {
     if (item.file.size > MAX_FILE_SIZE_BYTES) {
       return {
         ...item,
         status: "ERROR",
-        errorMsg: `Ukuran file melebihi batas maksimal ${MAX_FILE_SIZE_MB} MB`,
+        errorMsg: `File size exceeds the ${MAX_FILE_SIZE_MB} MB limit`,
       };
     }
 
@@ -199,7 +213,7 @@ export function UploadDropzone() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || `Upload gagal (Status ${res.status})`);
+        throw new Error(errJson.error || `Upload failed (Status ${res.status})`);
       }
 
       const response = await res.json();
@@ -219,16 +233,16 @@ export function UploadDropzone() {
       return {
         ...item,
         status: "ERROR",
-        errorMsg: err instanceof Error ? err.message : "Gagal mengunggah dokumen",
+        errorMsg: err instanceof Error ? err.message : "Failed to upload document",
       };
     }
   };
 
-  // Batch upload all ready files
+  // Upload every ready file in sequence
   const handleBatchUpload = async () => {
     const readyItems = fileQueue.filter((i) => i.status === "READY");
     if (readyItems.length === 0) {
-      setGlobalError("Pilih minimal satu dokumen untuk memulai ekstraksi AI dan audit mapping.");
+      setGlobalError("Choose at least one document to start AI extraction and audit mapping.");
       return;
     }
 
@@ -253,16 +267,17 @@ export function UploadDropzone() {
     }
 
     setIsBatchUploading(false);
-    // Refresh the live documents table
+    // Refresh the saved documents table
     fetchRecentDocs();
-    // Every successful upload immediately opens the field-level review. A
-    // single document is a valid unit of AI extraction and human approval.
+    // Every successful upload opens the field-level review. One document is a valid unit of AI extraction and human approval.
     if (reviewedIDs.length > 0) setReviewDocumentIds([...new Set(reviewedIDs)]);
   };
 
   const readyItemsCount = fileQueue.filter((i) => i.status === "READY").length;
   const successItemsCount = fileQueue.filter((i) => i.status === "SUCCESS" || i.status === "DUPLICATE").length;
   const errorItemsCount = fileQueue.filter((i) => i.status === "ERROR").length;
+
+  // Group saved documents by ingest batch
   const documentFolders = useMemo(() => {
     const groups = new Map<string, SavedDocItem[]>();
     savedDocs.forEach((doc) => {
@@ -272,41 +287,42 @@ export function UploadDropzone() {
     return Array.from(groups.entries()).map(([id, documents]) => ({
       id,
       documents,
-      label: id === "legacy" ? "Dokumen sebelum sistem batch" : `Folder upload ${id.slice(0, 8)}`,
+      label: id === "legacy" ? "Documents before batch system" : `Batch ${id.slice(0, 8)}`,
     }));
   }, [savedDocs]);
 
   return (
-    <div className="space-y-6 max-w-5xl font-sans">
-      {/* Upload Dropzone Card */}
-      <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl overflow-hidden">
-        <CardHeader className="p-6 pb-3 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <Layers className="h-4 w-4 text-sky-600" />
-              <span>Multi-File Ingestion Pipeline</span>
-            </CardTitle>
-            <Badge variant="outline" className="bg-white text-sky-700 border-sky-300 font-mono text-[10px] font-bold">
-              Maks. 10 MB / file
-            </Badge>
+    <div className="space-y-6">
+      {/* Upload card */}
+      <section className={cn(panel, "overflow-hidden")}>
+        <header className={panelHeader}>
+          <div className="flex items-center gap-3">
+            <span className={iconPlate("action")}>
+              <Layers className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+            </span>
+            <div className="space-y-1">
+              <h2 className={panelTitle}>Multi-File Ingestion Pipeline</h2>
+              <p className="text-[13px] text-body">
+                Supports PDF, JPG, PNG, and TIFF. Documents are checked with SHA-256 hashing to prevent duplicates.
+              </p>
+            </div>
           </div>
-          <CardDescription className="text-xs text-slate-500 mt-1">
-              Mendukung format PDF, JPG, PNG, dan TIFF. Dokumen diproses dengan verifikasi hash SHA-256 untuk mencegah duplikasi.
-          </CardDescription>
-        </CardHeader>
+          <span className={chip("navy")}>Max {MAX_FILE_SIZE_MB} MB per file</span>
+        </header>
 
-        <CardContent className="p-6 space-y-5">
-          {/* Drag and Drop Zone Area */}
+        <div className="space-y-5 p-6">
+          {/* Drop zone. A click anywhere on it opens the file picker. */}
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all flex flex-col items-center justify-center space-y-3 cursor-pointer select-none ${
+            className={cn(
+              "flex cursor-pointer select-none flex-col items-center justify-center gap-3 rounded-panel border-2 border-dashed p-8 text-center transition-colors",
               isDragOver
-                ? "border-sky-500 bg-sky-50/60 scale-[0.99]"
-                : "border-slate-300 bg-slate-50/70 hover:bg-slate-100/60 hover:border-slate-400"
-            }`}
+                ? "border-action bg-action/5"
+                : "border-hairline bg-canvas hover:border-muted hover:bg-surface-soft"
+            )}
           >
             <input
               ref={fileInputRef}
@@ -315,161 +331,139 @@ export function UploadDropzone() {
               accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif"
               onChange={handleInputChange}
               className="hidden"
+              aria-label="Choose document files"
             />
-            <div className="h-12 w-12 rounded-2xl bg-[#1B2A4A] text-sky-400 flex items-center justify-center shadow-xs">
-              <UploadCloud className="h-6 w-6" />
-            </div>
+            <span className={cn(iconPlate("navy"), "h-12 w-12 rounded-card")}>
+              <UploadCloud className="h-6 w-6" strokeWidth={1.75} aria-hidden="true" />
+            </span>
             <div className="space-y-1">
-              <span className="text-sm font-bold text-slate-800 block">
-                Pilih beberapa file atau seret (*drag & drop*) ke sini
-              </span>
-              <span className="text-xs text-slate-500 block">
-                Bisa submit banyak dokumen sekaligus (PDF, JPG, PNG &bull; Maks. 10 MB per dokumen)
-              </span>
+              <p className="text-[15px] font-semibold text-ink">Choose files or drag them here</p>
+              <p className="text-[13px] text-body">
+                Upload multiple documents at once (PDF, JPG, PNG • Max {MAX_FILE_SIZE_MB} MB per document)
+              </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2 text-xs font-semibold h-8 bg-white border-slate-300 pointer-events-none"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Pilih Dokumen
+            <Button type="button" variant="outline" className={cn(btnOutline, "mt-1 h-9")}>
+              <Plus className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+              <span>Choose Files</span>
             </Button>
           </div>
 
-          {/* Queue Actions & File List */}
+          {/* Queue actions and file list */}
           {fileQueue.length > 0 && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-700">
-                    Antrean Dokumen ({fileQueue.length} file)
-                  </span>
-                  {readyItemsCount > 0 && (
-                    <Badge variant="brand" className="text-[10px] py-0">
-                      {readyItemsCount} Siap Diunggah
-                    </Badge>
-                  )}
-                  {successItemsCount > 0 && (
-                    <Badge variant="success" className="text-[10px] py-0">
-                      {successItemsCount} Berhasil
-                    </Badge>
-                  )}
-                  {errorItemsCount > 0 && (
-                    <Badge variant="destructive" className="text-[10px] py-0">
-                      {errorItemsCount} Error
-                    </Badge>
-                  )}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13px] font-semibold text-ink">Document queue ({fileQueue.length} files)</span>
+                  {readyItemsCount > 0 && <span className={chip("navy")}>{readyItemsCount} ready to upload</span>}
+                  {successItemsCount > 0 && <span className={chip("success")}>{successItemsCount} succeeded</span>}
+                  {errorItemsCount > 0 && <span className={chip("error")}>{errorItemsCount} error</span>}
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
                     onClick={handleClearAll}
                     disabled={isBatchUploading}
-                    className="text-xs text-slate-500 hover:text-rose-600 h-8"
+                    className={cn(btnGhost, "h-9")}
                   >
-                    Bersihkan Semua
+                    Clear All
                   </Button>
                   <Button
                     type="button"
                     onClick={handleBatchUpload}
                     disabled={readyItemsCount < 2 || isBatchUploading}
-                    className="bg-[#1B2A4A] text-white hover:bg-sky-600 font-bold text-xs h-8 px-4 gap-2 cursor-pointer"
+                    className={cn(btnPrimary, "h-9")}
                   >
                     {isBatchUploading ? (
                       <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span>Mengunggah Batch...</span>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.75} aria-hidden="true" />
+                        <span>Uploading batch...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles className="h-3.5 w-3.5 text-sky-300" />
-                        <span>Unggah & Audit Batch ({readyItemsCount})</span>
+                        <Sparkles className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                        <span>Upload & Audit Batch ({readyItemsCount})</span>
                       </>
                     )}
                   </Button>
                 </div>
               </div>
 
-              {/* Items Card List */}
-              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+              <ul className="max-h-96 space-y-2 overflow-y-auto pr-1">
                 {fileQueue.map((item) => {
                   const isPdf = item.file.name.toLowerCase().endsWith(".pdf");
                   return (
-                    <div
+                    <li
                       key={item.id}
-                      className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                      className={cn(
+                        "flex flex-col items-start justify-between gap-3 rounded-control border p-3.5 transition-colors sm:flex-row sm:items-center",
                         item.status === "ERROR"
-                          ? "bg-rose-50/50 border-rose-200 text-rose-900"
+                          ? "border-error/40 bg-error-soft/60"
                           : item.status === "SUCCESS"
-                          ? "bg-emerald-50/40 border-emerald-200 text-emerald-900"
+                          ? "border-teal/60 bg-teal-soft/50"
                           : item.status === "DUPLICATE"
-                          ? "bg-amber-50/40 border-amber-200 text-amber-900"
-                          : "bg-white border-slate-200 text-slate-800"
-                      }`}
+                          ? "border-warning/40 bg-warning-soft/60"
+                          : "border-hairline bg-card"
+                      )}
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div
-                          className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
-                            isPdf
-                              ? "bg-rose-100 text-rose-700"
-                              : "bg-sky-100 text-sky-700"
-                          }`}
-                        >
-                          {isPdf ? <FileText className="h-4.5 w-4.5" /> : <FileImage className="h-4.5 w-4.5" />}
-                        </div>
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <span className={iconPlate(isPdf ? "error" : "action")}>
+                          {isPdf ? (
+                            <FileText className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+                          ) : (
+                            <FileImage className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+                          )}
+                        </span>
 
                         <div className="min-w-0 flex-1 space-y-0.5">
-                          <span className="text-xs font-bold text-slate-900 block truncate" title={item.file.name}>
+                          <span className="block truncate text-[13px] font-semibold text-ink" title={item.file.name}>
                             {item.file.name}
                           </span>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                            <span>{formatFileSize(item.file.size)}</span>
-                            <span>&bull;</span>
+                          <div className="flex flex-wrap items-center gap-2 text-[12px] text-body">
+                            <span className="tabular-nums">{formatFileSize(item.file.size)}</span>
+                            <span aria-hidden="true">•</span>
                             {item.status === "ERROR" ? (
-                              <span className="text-rose-600 font-semibold flex items-center gap-1">
-                                <AlertCircle className="h-3 w-3" />
-                                {item.errorMsg || "Ukuran > 10 MB"}
+                              <span className="flex items-center gap-1 font-semibold text-error-ink">
+                                <AlertCircle className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                                {item.errorMsg || `Over ${MAX_FILE_SIZE_MB} MB`}
                               </span>
                             ) : item.status === "SUCCESS" ? (
-                              <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Terunggah ({item.result?.document_id || "DOC-OK"})
+                              <span className="flex items-center gap-1 font-semibold text-teal-ink">
+                                <CheckCircle2 className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                                Uploaded ({item.result?.document_id || "DOC-OK"})
                               </span>
                             ) : item.status === "DUPLICATE" ? (
-                              <span className="text-amber-700 font-semibold flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Terverifikasi (Deduplikasi SHA-256)
+                              <span className="flex items-center gap-1 font-semibold text-warning-ink">
+                                <CheckCircle2 className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                                Verified (SHA-256 deduplication)
                               </span>
                             ) : item.status === "UPLOADING" ? (
-                              <span className="text-sky-600 font-semibold flex items-center gap-1">
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                Sedang mengekstrak AI...
+                              <span className="flex items-center gap-1 font-semibold text-action-ink">
+                                <Loader2 className="h-3 w-3 animate-spin" strokeWidth={1.75} aria-hidden="true" />
+                                Extracting with AI...
                               </span>
                             ) : (
-                              <span className="text-slate-400">Siap diunggah</span>
+                              <span>Ready to upload</span>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Controls & Classification */}
-                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      {/* Document type and remove control */}
+                      <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
                         {item.status === "READY" && (
                           <select
+                            aria-label={`Document type for ${item.file.name}`}
                             value={item.docType}
                             onChange={(e) => handleUpdateDocType(item.id, e.target.value)}
-                            className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-700"
+                            className={cn(selectClass, "h-8 px-2.5 text-[12px] font-medium")}
                           >
-                            <option value="AUTO">Auto (AI Clsf)</option>
+                            <option value="AUTO">Auto (AI classification)</option>
                             <option value="INVOICE">Invoice</option>
-                            <option value="SURAT_JALAN">Surat Jalan</option>
-                            <option value="POD">POD</option>
-                            <option value="RATE_AGREEMENT">PKS / Contract</option>
+                            <option value="SURAT_JALAN">Delivery Note (SJ)</option>
+                            <option value="POD">Proof of Delivery (POD)</option>
+                            <option value="RATE_AGREEMENT">Rate Agreement (PKS)</option>
                           </select>
                         )}
 
@@ -477,174 +471,185 @@ export function UploadDropzone() {
                           type="button"
                           onClick={() => handleRemoveItem(item.id)}
                           disabled={item.status === "UPLOADING"}
-                          className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-slate-100 transition-colors"
-                          title="Hapus dari antrean"
+                          aria-label={`Remove ${item.file.name} from queue`}
+                          title="Remove from queue"
+                          className={cn(
+                            "grid h-8 w-8 cursor-pointer place-items-center rounded-control text-muted transition-colors hover:bg-surface-soft hover:text-error-ink disabled:pointer-events-none disabled:opacity-40",
+                            focusRing
+                          )}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
                         </button>
                       </div>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </div>
           )}
 
-          {/* Global Error Banner */}
           {globalError && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+            <div role="alert" className="flex items-center gap-2 rounded-control border border-error/40 bg-error-soft p-3.5 text-[13px] font-medium text-error-ink">
+              <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
               <span>{globalError}</span>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      {/* LIVE SUPABASE DOCUMENTS REPOSITORY TABLE */}
-      <Card className="border border-slate-200/90 shadow-sm bg-white rounded-2xl overflow-hidden">
-        <CardHeader className="p-6 pb-4 border-b border-slate-100 bg-slate-50/50 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <FileCheck2 className="h-4 w-4 text-emerald-600" />
-              <span>Dokumen Tersimpan ({savedDocs.length})</span>
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-500 mt-0.5">
-              Metadata berkas yang siap dipakai dalam rekonsiliasi.
-            </CardDescription>
+      {/* Saved documents */}
+      <section className={cn(panel, "overflow-hidden")}>
+        <header className={panelHeader}>
+          <div className="flex items-center gap-3">
+            <span className={iconPlate("success")}>
+              <FileCheck2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+            </span>
+            <div className="space-y-1">
+              <h2 className={panelTitle}>Saved Documents ({savedDocs.length})</h2>
+              <p className="text-[13px] text-body">Document metadata ready for reconciliation.</p>
+            </div>
           </div>
 
           <Button
+            type="button"
             variant="outline"
-            size="sm"
             onClick={fetchRecentDocs}
             disabled={isLoadingDocs}
-            className="text-xs font-semibold h-8 bg-white border-slate-300 gap-1.5 cursor-pointer"
+            className={cn(btnOutline, "h-9")}
           >
-            <RotateCw className={`h-3.5 w-3.5 ${isLoadingDocs ? "animate-spin text-sky-600" : ""}`} />
-            <span>{isLoadingDocs ? "Memuat..." : "Refresh"}</span>
+            <RotateCw className={cn("h-3.5 w-3.5", isLoadingDocs && "animate-spin")} strokeWidth={1.75} aria-hidden="true" />
+            <span>{isLoadingDocs ? "Loading..." : "Refresh"}</span>
           </Button>
-        </CardHeader>
+        </header>
 
-        <CardContent className="p-0">
-          {savedDocs.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500">
-              Belum ada dokumen yang terdaftar di database.
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {documentFolders.map((folder) => {
-                const isExpanded = expandedFolders.has(folder.id);
-                return (
-                  <div key={folder.id}>
-                    <button
-                      type="button"
-                      onClick={() => setExpandedFolders((previous) => {
+        {savedDocs.length === 0 ? (
+          <div className={emptyState}>No documents registered in the database yet.</div>
+        ) : (
+          <ul>
+            {documentFolders.map((folder) => {
+              const isExpanded = expandedFolders.has(folder.id);
+              return (
+                <li key={folder.id} className="border-b border-hairline last:border-b-0">
+                  <button
+                    type="button"
+                    aria-expanded={isExpanded}
+                    onClick={() =>
+                      setExpandedFolders((previous) => {
                         const next = new Set(previous);
                         if (next.has(folder.id)) next.delete(folder.id);
                         else next.add(folder.id);
                         return next;
-                      })}
-                      className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
-                    >
-                      {isExpanded ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
-                      <Folder className="h-5 w-5 text-amber-500" />
-                      <span className="font-bold text-slate-800">{folder.label}</span>
-                      <Badge variant="outline" className="text-[10px]">{folder.documents.length} file</Badge>
-                    </button>
-                    {isExpanded && (
-                      <div className="overflow-x-auto border-t border-slate-100">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                            <tr>
-                              <th className="py-3 px-4">Nama Dokumen</th>
-                              <th className="py-3 px-3">Tipe</th>
-                              <th className="py-3 px-3">Ukuran</th>
-                              <th className="py-3 px-3">Waktu Masuk</th>
-                              <th className="py-3 px-3">Status</th>
-                              <th className="py-3 px-4 text-right">Aksi</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 font-medium">
-                            {folder.documents.map((doc) => {
-                    const isPdf = doc.filename.toLowerCase().endsWith(".pdf");
-                    const dateFormatted = doc.created_at
-                      ? new Date(doc.created_at).toLocaleString("id-ID", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })
-                      : "-";
+                      })
+                    }
+                    className={cn(
+                      "flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-surface-soft",
+                      focusRing
+                    )}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-body" strokeWidth={1.75} aria-hidden="true" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-body" strokeWidth={1.75} aria-hidden="true" />
+                    )}
+                    <Folder className="h-5 w-5 text-warning" strokeWidth={1.75} aria-hidden="true" />
+                    <span className="font-semibold text-ink">{folder.label}</span>
+                    <span className={chip("neutral")}>{folder.documents.length} files</span>
+                  </button>
 
-                                return (
-                      <tr key={doc.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${
-                                isPdf ? "bg-rose-100 text-rose-700" : "bg-sky-100 text-sky-700"
-                              }`}
-                            >
-                              {isPdf ? <FileText className="h-3.5 w-3.5" /> : <FileImage className="h-3.5 w-3.5" />}
-                            </div>
-                            <div className="min-w-0 max-w-xs">
-                              <span className="font-bold text-slate-900 block truncate" title={doc.filename}>
-                                {doc.filename}
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-mono block truncate">
-                                {doc.id}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <Badge
-                            variant={
-                              doc.classification === "INVOICE"
-                                ? "brand"
-                                : doc.classification === "RATE_AGREEMENT"
-                                ? "warning"
-                                : "outline"
-                            }
-                            className="text-[10px] font-bold py-0"
-                          >
-                            {doc.classification || "DOCUMENT"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3 text-slate-600 font-mono text-[11px]">
-                          {formatFileSize(doc.file_size)}
-                        </td>
-                        <td className="py-3 px-3 text-slate-500 text-[11px]">
-                          {dateFormatted}
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                            {doc.status || "COMPLETED"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <a href={`${API_BASE}/documents/${doc.id}/download`} download={doc.filename} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-sky-200 px-2.5 py-1 text-[11px] font-bold text-sky-700 transition-colors hover:bg-[#1B2A4A] hover:text-white">
-                            <Download className="h-3 w-3" />
-                            <span>Unduh</span>
-                          </a>
-                        </td>
-                      </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+                  {isExpanded && (
+                    <div className="overflow-x-auto border-t border-hairline">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr>
+                            <th className={th}>Document name</th>
+                            <th className={th}>Type</th>
+                            <th className={th}>Size</th>
+                            <th className={th}>Received</th>
+                            <th className={th}>Status</th>
+                            <th className={cn(th, "text-right")}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {folder.documents.map((doc) => {
+                            const isPdf = doc.filename.toLowerCase().endsWith(".pdf");
+                            const dateFormatted = doc.created_at
+                              ? new Date(doc.created_at).toLocaleString("en-US", {
+                                  dateStyle: "short",
+                                  timeStyle: "short",
+                                })
+                              : "-";
+
+                            return (
+                              <tr key={doc.id} className="border-b border-hairline last:border-b-0 transition-colors hover:bg-surface-soft">
+                                <td className={td}>
+                                  <div className="flex items-center gap-2.5">
+                                    <span className={cn(iconPlate(isPdf ? "error" : "action"), "h-8 w-8 rounded-plate")}>
+                                      {isPdf ? (
+                                        <FileText className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                                      ) : (
+                                        <FileImage className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                                      )}
+                                    </span>
+                                    <div className="min-w-0 max-w-xs">
+                                      <span className="block truncate font-semibold text-ink" title={doc.filename}>
+                                        {doc.filename}
+                                      </span>
+                                      <span className="block truncate text-[11px] tabular-nums text-muted">{doc.id}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className={td}>
+                                  <span className={chip(doc.classification === "INVOICE" ? "navy" : doc.classification === "RATE_AGREEMENT" ? "warning" : "neutral")}>
+                                    {doc.classification || "DOCUMENT"}
+                                  </span>
+                                </td>
+                                <td className={cn(td, "text-body")}>{formatFileSize(doc.file_size)}</td>
+                                <td className={cn(td, "text-body")}>{dateFormatted}</td>
+                                <td className={td}>
+                                  <span className={chip("success")}>
+                                    <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                                    {doc.status || "COMPLETED"}
+                                  </span>
+                                </td>
+                                <td className={cn(td, "text-right")}>
+                                  <a
+                                    href={`${API_BASE}/documents/${doc.id}/download`}
+                                    download={doc.filename}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded-control border border-hairline px-2.5 py-1 text-[12px] font-semibold text-action-ink transition-colors hover:bg-navy hover:text-white",
+                                      focusRing
+                                    )}
+                                  >
+                                    <Download className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                                    <span>Download</span>
+                                  </a>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                  );
-                })}
-              </div>
-          )}
-        </CardContent>
-      </Card>
-      {reviewDocumentIds && <BatchHitlReviewModal_Compact documentIds={reviewDocumentIds} onClose={() => setReviewDocumentIds(null)} onFinalized={(eventId) => {
-        setReviewDocumentIds(null);
-        window.location.assign(`/dashboard?event=${encodeURIComponent(eventId)}`);
-      }} />}
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {reviewDocumentIds && (
+        <BatchHitlReviewModal
+          documentIds={reviewDocumentIds}
+          onClose={() => setReviewDocumentIds(null)}
+          onFinalized={(eventId) => {
+            setReviewDocumentIds(null);
+            window.location.assign(`/dashboard?event=${encodeURIComponent(eventId)}`);
+          }}
+        />
+      )}
     </div>
   );
 }

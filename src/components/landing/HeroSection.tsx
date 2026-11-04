@@ -11,7 +11,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ onLaunchApp }: HeroSectionProps) {
   return (
-    <section className="relative isolate overflow-hidden bg-[#E6EEF5] pt-20 pb-24 md:pt-34 md:pb-38">
+    <section className="relative isolate overflow-hidden bg-[#E6EEF5] pt-28 pb-24 md:pt-34 md:pb-38">
       <div className="absolute inset-0 pointer-events-none hero-grid" />
       <Image
         src="/polygon-asymmetric.svg"
@@ -32,7 +32,7 @@ export function HeroSection({ onLaunchApp }: HeroSectionProps) {
 
       <div className="relative z-10 mx-auto grid max-w-[1440px] items-center gap-16 px-5 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,.95fr)] lg:px-12">
         <div className="max-w-4xl">
-          <h1 className="hero-reveal hero-reveal-delay-1 font-display max-w-5xl text-[clamp(2.8rem,5.5vw,6.8rem)] leading-[.92] tracking-tight text-[#12203A] text-balance">
+          <h1 className="hero-reveal hero-reveal-delay-1 font-display max-w-5xl text-[clamp(2.2rem,9.4vw,2.8rem)] md:text-[clamp(2.8rem,3.8vw,6.8rem)] leading-[1.3] tracking-normal text-[#12203A] text-balance">
             From disconnected documents to{" "}
             <span className="text-[#0077CC]">verified transactions.</span>
           </h1>

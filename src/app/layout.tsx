@@ -1,5 +1,21 @@
 import type { Metadata } from "next";
+import { Boldonse, Figtree } from "next/font/google";
 import "./globals.css";
+
+const boldonse = Boldonse({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-boldonse",
+  display: "swap",
+  // Next.js has no fallback metrics for Boldonse. The theme's system fallback stack covers it.
+  adjustFontFallback: false,
+});
+
+const figtree = Figtree({
+  subsets: ["latin"],
+  variable: "--font-figtree",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Verflo | Evidence-led 3PL reconciliation",
@@ -21,10 +37,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body
-        className="font-sans bg-[#F7F9FB] text-[#12203A] min-h-full flex flex-col antialiased selection:bg-[#00B4B3]/20 selection:text-[#243A5E]"
-      >
+    <html lang="en" className={`h-full ${boldonse.variable} ${figtree.variable}`}>
+      <body className="flex min-h-full flex-col bg-canvas font-sans text-ink antialiased selection:bg-teal/20 selection:text-navy">
         {children}
       </body>
     </html>

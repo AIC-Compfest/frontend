@@ -72,7 +72,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-5xl grid lg:grid-cols-[1fr_420px] gap-10 items-center">
           <div className="hidden lg:block px-8">
             <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#0077CC]">A clearer operating rhythm</span>
-            <h1 className="font-display text-5xl leading-[1.05] text-[#12203A] mt-5">A shared view of every exception.</h1>
+            <h1 className="font-display text-4xl leading-[1.5] text-[#12203A] mt-5">A shared view of every exception.</h1>
             <p className="text-base leading-relaxed text-[#55637A] max-w-md mt-6">Set up a workspace where finance and operations teams can trace the decision from billed amount to source document.</p>
           </div>
           <div className="w-full max-w-sm mx-auto space-y-4">

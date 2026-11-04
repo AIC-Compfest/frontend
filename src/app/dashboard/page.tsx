@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { QueueSummary, ShipmentEvent, QueueItem } from "@/types/reconciliation";
+import { QueueSummary, ShipmentEvent } from "@/types/reconciliation";
 import { ReviewQueue } from "@/components/ReviewQueue";
 import { EvidenceViewer } from "@/components/EvidenceViewer";
 import { ReconciliationCard } from "@/components/ReconciliationCard";
@@ -10,7 +10,7 @@ import { DecisionModal } from "@/components/DecisionModal";
 import { DisputePackageModal } from "@/components/DisputePackageModal";
 import { AuditTrailView } from "@/components/AuditTrailView";
 
-// Dashboard Views & Sidebar
+// Dashboard views and sidebar
 import { Sidebar, DashboardTab } from "./components/Sidebar";
 import { OverviewView } from "./components/OverviewView";
 import { UploadDropzone } from "./components/UploadDropzone";
@@ -21,14 +21,26 @@ import { FinalApprovalView } from "./components/FinalApprovalView";
 import { ExceptionView } from "./components/ExceptionView";
 import { GlobalAuditLedgerView } from "./components/GlobalAuditLedgerView";
 
-import { RotateCw, ShieldCheck, Folder } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Loader2, Menu, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { API_V1 } from "@/lib/config";
 import { getStoredUser } from "@/lib/auth";
+import { btnOutline, focusRing, pageTitle } from "@/lib/dashboard-ui";
 
 const API_BASE = API_V1;
+
+const PAGE_TITLES: Record<DashboardTab, string> = {
+  OVERVIEW: "Overview",
+  QUEUE: "Review Queue",
+  EXCEPTIONS: "Anomaly Archive",
+  FINAL_APPROVAL: "Final Approval",
+  WORKSPACE: "Evidence Workspace",
+  UPLOAD: "Document Hub",
+  CONTRACTS: "Logistics Partners (3PL)",
+  DISPUTES: "Dispute Packages",
+  AUDIT: "Audit Ledger Trail",
+  SETTINGS: "Policy & Tolerance",
+};
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -38,6 +50,9 @@ function DashboardContent() {
   const userRole = currentUser?.role || roleParam || "UNAUTHENTICATED";
 
   const [currentTab, setCurrentTab] = useState<DashboardTab>("OVERVIEW");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerWasOpen = useRef(false);
   const [queueSummary, setQueueSummary] = useState<QueueSummary>({
     total_invoiced_amount: 0,
     total_variance_amount: 0,
@@ -47,25 +62,24 @@ function DashboardContent() {
     matches_count: 0,
   });
 
-  // Selected Transaction & Workspace State
+  // Selected transaction and workspace state
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [batchTransactions, setBatchTransactions] = useState<QueueItem[]>([]);
   const [currentEvent, setCurrentEvent] = useState<ShipmentEvent | null>(null);
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
 
-  // Evidence Viewer Controls - activeDocTab is now a document ID (string UUID)
+  // Evidence viewer controls. activeDocTab holds a document ID (UUID).
   const [activeDocTab, setActiveDocTab] = useState<string>("");
   const [selectedField, setSelectedField] = useState<string | null>(null);
 
-  // Modal States
+  // Modal state
   const [decisionModalAction, setDecisionModalAction] = useState<"APPROVE" | "DISPUTE" | "REJECT" | null>(null);
   const [isDisputePackageOpen, setIsDisputePackageOpen] = useState(false);
 
-  // Fetch KPI Summary from Supabase Review Queue API
+  // Fetch the KPI summary from the review queue API
   const fetchSummary = useCallback(async () => {
     try {
       const res = await fetch("/api/review-queue");
-      if (!res.ok) throw new Error("Gagal mengambil ringkasan KPI");
+      if (!res.ok) throw new Error("Failed to load the KPI summary");
       const data = await res.json();
       if (data.summary) {
         setQueueSummary(data.summary);
@@ -75,12 +89,12 @@ function DashboardContent() {
     }
   }, []);
 
-  // Fetch Single Transaction Reconciliation Event (Dual-Pane Evidence)
+  // Fetch one reconciliation event for the dual-pane evidence view
   const fetchEventDetail = useCallback(async (eventId: string) => {
     try {
       setIsLoadingEvent(true);
       const res = await fetch(`${API_BASE}/reconcile/${eventId}`);
-      if (!res.ok) throw new Error("Gagal mengambil rincian event rekonsiliasi");
+      if (!res.ok) throw new Error("Failed to load the reconciliation event");
       const data = await res.json();
       setCurrentEvent(data);
     } catch (err) {
@@ -94,15 +108,15 @@ function DashboardContent() {
     fetchSummary();
   }, [fetchSummary]);
 
-  // Handle Transaction Selection from Queue or Overview
-  const handleSelectTransaction = (eventId: string, allBatchItems?: QueueItem[]) => {
+  // Open the evidence workspace for a transaction picked in the queue, overview, or archive
+  const handleSelectTransaction = (eventId: string) => {
     setSelectedEventId(eventId);
     setSelectedField(null);
-    setActiveDocTab(""); // Will be auto-set by EvidenceViewer
-    if (allBatchItems?.length) setBatchTransactions(allBatchItems);
+    // Leave activeDocTab empty so EvidenceViewer selects the first document on load.
+    setActiveDocTab("");
 
-    // The review queue deliberately contains only a summary projection.  Always
-    // load the canonical event so the evidence workspace never invents values.
+    // The review queue deliberately contains only a summary projection. Always load the
+    // canonical event so the evidence workspace never invents values.
     fetchEventDetail(eventId);
 
     setCurrentTab("WORKSPACE");
@@ -114,16 +128,24 @@ function DashboardContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventParam]);
 
-  // Handle "View Proof" from Discrepancy Card
-  // Note: docTab parameter is for document type, but we now use document IDs as tabs
-  // The EvidenceViewer will handle finding the right document of that type
-  const handleViewProof = (fieldName: string, docTab: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT") => {
-    // Leave activeDocTab empty - EvidenceViewer will auto-select the first document on load
-    // setActiveDocTab("");
+  // Return focus to the Menu button when the mobile drawer closes.
+  useEffect(() => {
+    if (drawerOpen) {
+      drawerWasOpen.current = true;
+      return;
+    }
+    if (drawerWasOpen.current) {
+      drawerWasOpen.current = false;
+      menuButtonRef.current?.focus();
+    }
+  }, [drawerOpen]);
+
+  // Open the field-level proof for a discrepancy. EvidenceViewer picks the document from the field name.
+  const handleViewProof = (fieldName: string) => {
     setSelectedField(fieldName);
   };
 
-  // Handle Reviewer Decision Submission
+  // Submit a reviewer decision
   const handleConfirmDecision = async (action: string, role: string, reason: string) => {
     if (!selectedEventId) return;
 
@@ -140,7 +162,7 @@ function DashboardContent() {
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.error || "Gagal menyimpan keputusan.");
+      throw new Error(err.error || "Failed to save the decision.");
     }
 
     const updatedEvent = await res.json();
@@ -149,85 +171,64 @@ function DashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FB] text-[#12203A] flex font-sans">
-      {/* 1. Left Sidebar Navigation */}
+    <div className="flex min-h-dvh bg-canvas text-ink">
       <Sidebar
         currentTab={currentTab}
-        onTabChange={(tab) => setCurrentTab(tab)}
-        queueCount={queueSummary.total_invoices_count}
-        exceptionCount={queueSummary.open_exceptions_count}
-        userRole={userRole}
+        onTabChange={setCurrentTab}
+        mobileOpen={drawerOpen}
+        onMobileOpenChange={setDrawerOpen}
       />
 
-      {/* 2. Main Content Right Panel */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-        {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 bg-[#F7F9FB]/90 backdrop-blur-xl border-b border-[#CDDBE8] px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-extrabold text-[#243A5E] tracking-tight">
-              {currentTab === "OVERVIEW" && "Overview & Risk Analytics"}
-              {currentTab === "QUEUE" && "Priority Review Queue (Anomali)"}
-              {currentTab === "EXCEPTIONS" && "Arsip Dokumen Anomali & Ditolak"}
-              {currentTab === "WORKSPACE" && "Dual-Pane Evidence Workspace"}
-              {currentTab === "FINAL_APPROVAL" && "Executive Final Approval (SoD)"}
-              {currentTab === "UPLOAD" && "Document Ingest Dropzone"}
-              {currentTab === "CONTRACTS" && "Mitra Logistik (3PL)"}
-              {currentTab === "DISPUTES" && "Official 3PL Dispute Packages"}
-              {currentTab === "AUDIT" && "Immutable Audit Trail Ledger"}
-              {currentTab === "SETTINGS" && "Policy & Tolerance Thresholds"}
-            </h1>
-            {/* <Badge variant="outline" className="rounded-full border-[#00B4B3]/30 bg-[#DFF5F4] text-[10px] font-mono text-[#007A78]">
-              Workspace connected
-            </Badge> */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-3 border-b border-hairline bg-canvas/[.92] px-6 backdrop-blur-md max-md:px-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              aria-controls="dashboard-sidebar"
+              aria-expanded={drawerOpen}
+              className={cn(btnOutline, "h-9 px-3 md:hidden")}
+            >
+              <Menu className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+              <span>Menu</span>
+            </button>
+            <h1 className={cn(pageTitle, "truncate")}>{PAGE_TITLES[currentTab]}</h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchSummary}
-              className="text-xs font-semibold gap-1.5 h-8 text-slate-700 cursor-pointer"
-            >
-              <RotateCw className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Refresh Data</span>
-            </Button>
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#EDF4FA] border border-[#8FB8D6]/40 text-xs font-bold text-[#243A5E]">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>{userRole}</span>
-            </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <button type="button" onClick={fetchSummary} className={cn(btnOutline, "h-9 px-3 sm:px-4")}>
+              <RotateCw className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+              <span className="sr-only sm:not-sr-only">Refresh</span>
+            </button>
+            <span className="hidden h-7 items-center rounded-full bg-surface-soft px-3 text-[12px] font-semibold tracking-[.02em] text-navy sm:inline-flex">
+              {userRole}
+            </span>
           </div>
         </header>
 
-        {/* Dynamic View Body - Each Tab Requests its own targeted DB payload */}
-        <main className="p-6 flex-1 max-w-7xl w-full mx-auto">
-          {/* TAB 1: OVERVIEW */}
+        {/* Dynamic view body. Each tab requests its own targeted payload. */}
+        <main className="mx-auto w-full max-w-[1400px] flex-1 p-6 max-md:p-4">
           {currentTab === "OVERVIEW" && (
             <OverviewView
               summary={queueSummary}
               onNavigateToQueue={() => setCurrentTab("QUEUE")}
               onNavigateToContracts={() => setCurrentTab("CONTRACTS")}
-              onSelectTransaction={handleSelectTransaction}
             />
           )}
 
-          {/* TAB 2: QUEUE - Targeted query with server-side status/severity/vendor filter */}
+          {/* Targeted query with server-side status, severity, and vendor filters */}
           {currentTab === "QUEUE" && (
             <ReviewQueue
               selectedEventId={selectedEventId}
               onSelectTransaction={handleSelectTransaction}
               onRefresh={fetchSummary}
-              onNavigateToFinalApproval={() => setCurrentTab("FINAL_APPROVAL")}
             />
           )}
 
-          {/* TAB 2.5: EXCEPTIONS - Archive of anomali / rejected / duplicate docs */}
-          {currentTab === "EXCEPTIONS" && (
-            <ExceptionView
-              onSelectTransaction={handleSelectTransaction}
-            />
-          )}
+          {currentTab === "EXCEPTIONS" && <ExceptionView onSelectTransaction={handleSelectTransaction} />}
 
-          {/* TAB 3: FINAL APPROVAL (SoD) - Targeted queries: status=MATCH (Pending) & status=APPROVED (History) */}
+          {/* Targeted queries: status=MATCH (pending) and status=APPROVED (history) */}
           {currentTab === "FINAL_APPROVAL" && (
             <FinalApprovalView
               onSelectTransaction={handleSelectTransaction}
@@ -236,39 +237,39 @@ function DashboardContent() {
             />
           )}
 
-          {/* TAB 4: WORKSPACE - Dual-Pane Spatial Evidence */}
+          {/* Dual-pane spatial evidence. Opened from the queue, overview, archive, or ?event= */}
           {currentTab === "WORKSPACE" && (
             <div className="space-y-6">
-              {/* Breadcrumb Toolbar */}
-              <div className="flex items-center justify-between text-xs text-[#5F86A6]">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentTab("QUEUE")}
-                    className="font-medium hover:text-[#243A5E] hover:underline cursor-pointer"
-                  >
-                    ← Kembali ke Review Queue
-                  </button>
-                  <span>/</span>
-                  <span className="font-mono font-semibold text-[#243A5E]">
-                    {currentEvent?.invoice?.invoice_number || "Transaction Detail"}
-                  </span>
-                  <span>/</span>
-                  <span className="text-slate-500">Spatial Proof Inspection</span>
-                </div>
-              </div>
-
-
+              <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-[13px] text-body">
+                <button
+                  type="button"
+                  onClick={() => setCurrentTab("QUEUE")}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-pop font-semibold text-action-ink underline-offset-4 hover:underline",
+                    focusRing
+                  )}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                  <span>Back to Review Queue</span>
+                </button>
+                <span aria-hidden="true">/</span>
+                <span className="font-semibold text-navy tabular-nums">
+                  {currentEvent?.invoice?.invoice_number || "Transaction Detail"}
+                </span>
+                <span aria-hidden="true">/</span>
+                <span>Proof Inspection</span>
+              </nav>
 
               {isLoadingEvent || !currentEvent ? (
-                <div className="py-20 text-center text-[#5F86A6] text-xs">
-                  <div className="animate-spin w-8 h-8 border-2 border-[#243A5E] border-t-transparent rounded-full mx-auto mb-3" />
-                  Memuat data rekonsiliasi dan bukti dokumen...
+                <div className="flex flex-col items-center gap-3 py-20 text-center text-[13px] text-body">
+                  <Loader2 className="h-6 w-6 animate-spin text-navy" aria-hidden="true" />
+                  <span>Loading reconciliation data and document evidence...</span>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Dual-Pane Layout: 50% Left (Evidence Viewer) / 50% Right (Reconciliation Card) */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                    <div className="lg:col-span-6 xl:col-span-6 h-[680px]">
+                  {/* Dual pane: evidence viewer on the left, reconciliation card on the right */}
+                  <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+                    <div className="h-[680px] lg:col-span-6">
                       <EvidenceViewer
                         event={currentEvent}
                         selectedField={selectedField}
@@ -278,7 +279,7 @@ function DashboardContent() {
                       />
                     </div>
 
-                    <div className="lg:col-span-6 xl:col-span-6 h-[680px]">
+                    <div className="h-[680px] lg:col-span-6">
                       <ReconciliationCard
                         event={currentEvent}
                         onViewProof={handleViewProof}
@@ -288,39 +289,25 @@ function DashboardContent() {
                     </div>
                   </div>
 
-                  {/* Audit Trail Timeline */}
                   <AuditTrailView auditTrail={currentEvent.audit_trail} />
                 </div>
               )}
             </div>
           )}
 
-          {/* TAB 5: UPLOAD - Document Ingest */}
           {currentTab === "UPLOAD" && <UploadDropzone />}
 
-          {/* TAB 6: MITRA LOGISTIK - Master vendor & PKS matrix */}
           {currentTab === "CONTRACTS" && <MitraLogistikView />}
 
-          {/* TAB 7: DISPUTES - Targeted query for status=DISPUTED */}
-          {currentTab === "DISPUTES" && (
-            <DisputeListView
-              onSelectTransaction={handleSelectTransaction}
-            />
-          )}
+          {currentTab === "DISPUTES" && <DisputeListView onSelectTransaction={handleSelectTransaction} />}
 
-          {/* TAB 8: AUDIT - Global Immutable Audit Trail Ledger */}
-          {currentTab === "AUDIT" && (
-            <GlobalAuditLedgerView
-              onSelectTransaction={handleSelectTransaction}
-            />
-          )}
+          {currentTab === "AUDIT" && <GlobalAuditLedgerView />}
 
-          {/* TAB 9: SETTINGS */}
           {currentTab === "SETTINGS" && <SettingsView />}
         </main>
       </div>
 
-      {/* Decision Confirmation Modal */}
+      {/* Decision confirmation modal */}
       {currentEvent && (
         <DecisionModal
           isOpen={decisionModalAction !== null}
@@ -331,7 +318,7 @@ function DashboardContent() {
         />
       )}
 
-      {/* Dispute Package Modal */}
+      {/* Dispute package modal */}
       {selectedEventId && (
         <DisputePackageModal
           isOpen={isDisputePackageOpen}
@@ -347,9 +334,9 @@ export default function DashboardPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center text-xs text-slate-500">
-          <div className="animate-spin w-6 h-6 border-2 border-[#243A5E] border-t-transparent rounded-full mr-2" />
-          Memuat enterprise dashboard...
+        <div className="flex min-h-dvh items-center justify-center gap-2 bg-canvas text-[13px] text-body">
+          <Loader2 className="h-5 w-5 animate-spin text-navy" aria-hidden="true" />
+          <span>Loading dashboard...</span>
         </div>
       }
     >

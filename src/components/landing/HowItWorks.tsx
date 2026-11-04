@@ -36,8 +36,8 @@ export function HowItWorks() {
           <p className="text-sm font-semibold tracking-[.16em] text-[#0077CC]">
             A SINGLE TRACE
           </p>
-          <h2 className="mt-7 font-display text-5xl leading-[.98] tracking-tight text-[#12203A] md:text-7xl">
-            A messy document has a better ending.
+          <h2 className="mt-7 font-display text-[2.75rem] sm:text-3xl leading-[1.3] tracking-normal text-[#12203A] md:text-5xl">
+            A messy document pile has a better ending.
           </h2>
           <p className="mt-8 max-w-sm text-base leading-7 text-[#55637A]">
             Each stage adds context until your team can see what happened, why

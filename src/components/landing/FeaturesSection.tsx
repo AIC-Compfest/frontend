@@ -16,8 +16,8 @@ export function FeaturesSection() {
       className="relative overflow-hidden bg-[#F7F9FB] py-20 md:py-28"
     >
       <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-        <div className="grid items-end gap-10 lg:grid-cols-[.86fr_1.14fr]">
-          <h2 className="font-display max-w-2xl text-5xl leading-[.98] tracking-tight text-[#12203A] md:text-7xl">
+        <div className="grid items-end gap-10 lg:grid-cols-[.90fr_1.10fr]">
+          <h2 className="font-display max-w-2xl text-[2.75rem] sm:text-3xl leading-[1.3] tracking-normal text-[#12203A] md:text-5xl">
             The work behind a confident approval.
           </h2>
           <h3 className="max-w-xl justify-self-end text-2xl leading-8 text-[#55637A]">
@@ -44,7 +44,7 @@ export function FeaturesSection() {
             <div className="relative z-10 flex h-full flex-col justify-between">
               <div>
                 <FileSearch className="h-8 w-8 text-[#8FD7D4]" />
-                <h3 className="mt-14 max-w-lg font-display text-4xl leading-[1.02] tracking-normal md:text-6xl">
+                <h3 className="mt-14 max-w-lg font-display text-2xl leading-[1.6] tracking-normal md:text-4xl">
                   Evidence stays attached to the decision.
                 </h3>
               </div>

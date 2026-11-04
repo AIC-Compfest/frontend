@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ShipmentEvent, EvidenceSource } from "@/types/reconciliation";
+import { ShipmentEvent } from "@/types/reconciliation";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   ZoomIn,
   ZoomOut,
@@ -20,15 +18,24 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { API_V1 } from "@/lib/config";
+import { formatIDR } from "@/lib/format";
+import {
+  chip,
+  ChipTone,
+  focusRing,
+  label as labelClass,
+  td,
+  th,
+} from "@/lib/dashboard-ui";
 import { DocumentPageView, OverlayBox } from "@/components/evidence/DocumentPageView";
 
-type DocTab = string; // Now we use document IDs directly as tab keys
+type DocTab = string; // Document IDs are used directly as tab keys
 
 interface DocumentTabInfo {
   id: string;
   type: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT";
   label: string;
-  badge?: { label: string; color: string };
+  badge?: { label: string; tone: ChipTone };
 }
 
 interface EvidenceViewerProps {
@@ -122,6 +129,26 @@ function entityFor(event: ShipmentEvent, tab: DocTab) {
 const bboxKey = (page: number, b: { x1: number; y1: number; x2: number; y2: number }) =>
   `${page}|${b.x1.toFixed(3)}|${b.y1.toFixed(3)}|${b.x2.toFixed(3)}|${b.y2.toFixed(3)}`;
 
+function IconButton({
+  label,
+  className,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      className={cn(
+        "grid h-6 w-6 place-items-center rounded-pop text-body transition-colors hover:bg-surface-soft hover:text-ink disabled:pointer-events-none disabled:opacity-40",
+        focusRing,
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
 export function EvidenceViewer({
   event,
   selectedField,
@@ -133,16 +160,12 @@ export function EvidenceViewer({
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
   const [rows, setRows] = useState<EvidenceRow[]>([]);
-  const [rowsError, setRowsError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [documentTabs, setDocumentTabs] = useState<DocumentTabInfo[]>([]);
-  const [segmentsLoading, setSegmentsLoading] = useState(false);
 
-  // documentId is now the activeDocumentTab itself (a document UUID)
+  // documentId is the activeDocumentTab itself (a document UUID)
   const documentId = activeDocumentTab;
-  const docTabInfo = documentTabs.find((t) => t.id === documentId);
-  const documentType = docTabInfo?.type;
-  const segmentId = undefined; // Not using segment_id filtering anymore
+  const segmentId = undefined; // segment_id filtering is no longer used
   const fileUrl = documentId ? `${API_V1}/documents/${documentId}/download` : null;
 
   const isPODMissing = useMemo(() => {
@@ -159,11 +182,10 @@ export function EvidenceViewer({
     );
   }, [event]);
 
-  // Fetch all documents in the ingest batch and create tabs
+  // Fetch all documents in the ingest batch and create one tab per document
   useEffect(() => {
     if (!event.ingest_batch_id) return;
 
-    setSegmentsLoading(true);
     const ctrl = new AbortController();
 
     fetch(`${API_V1}/documents?batch=${encodeURIComponent(event.ingest_batch_id)}`, { signal: ctrl.signal })
@@ -176,17 +198,16 @@ export function EvidenceViewer({
         if (docIds.length === 0) throw new Error("No documents in batch");
 
         const tabs: DocumentTabInfo[] = [];
-        const docTypeMap: Record<string, "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT"> = {};
 
         for (const docId of docIds) {
           try {
             const segResp = await fetch(`${API_V1}/documents/${docId}/segments`, { signal: ctrl.signal });
             if (!segResp.ok) throw new Error(`Segments HTTP ${segResp.status}`);
-            
+
             const segData = await segResp.json();
             let docType: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT" = "INVOICE";
-            
-            // Find the first non-UNKNOWN document type in segments
+
+            // Use the first non-UNKNOWN document type found in the segments
             for (const seg of segData.segments || []) {
               if (seg.document_type && seg.document_type !== "UNKNOWN") {
                 docType = seg.document_type;
@@ -194,32 +215,30 @@ export function EvidenceViewer({
               }
             }
 
-            docTypeMap[docId] = docType;
-
-            // Generate tab label and badge
+            // Tab label and status badge
             let label = "";
-            let badge: { label: string; color: string } | undefined;
+            let badge: { label: string; tone: ChipTone } | undefined;
 
             switch (docType) {
               case "INVOICE":
-                label = "Invoice (Faktur)";
+                label = "Invoice";
                 if (isDuplicate) {
-                  badge = { label: "DUPLIKAT", color: "bg-rose-50 text-rose-700 border-rose-200" };
+                  badge = { label: "DUPLICATE", tone: "error" };
                 }
                 break;
               case "SURAT_JALAN":
-                label = "Surat Jalan";
+                label = "Delivery Note (SJ)";
                 break;
               case "POD":
-                label = "POD (Bukti Kirim)";
+                label = "Proof of Delivery (POD)";
                 if (isPODMissing) {
-                  badge = { label: "HILANG", color: "bg-rose-50 text-rose-700 border-rose-200" };
+                  badge = { label: "MISSING", tone: "error" };
                 } else {
-                  badge = { label: "TERSEDIA", color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+                  badge = { label: "AVAILABLE", tone: "success" };
                 }
                 break;
               case "RATE_AGREEMENT":
-                label = "Rate Card (PKS)";
+                label = "Rate Agreement (PKS)";
                 break;
             }
 
@@ -231,7 +250,7 @@ export function EvidenceViewer({
 
         setDocumentTabs(tabs);
 
-        // If current documentId is not in tabs, switch to first tab
+        // If the current document is not in the tabs, switch to the first tab
         if (tabs.length > 0 && !tabs.find((t) => t.id === documentId)) {
           onTabChange(tabs[0].id as DocTab);
         }
@@ -239,36 +258,28 @@ export function EvidenceViewer({
       .catch((e) => {
         if (e.name !== "AbortError") {
           console.error("Failed to fetch batch documents:", e);
-          // Fallback: create a default tab using entity's document_id if available
+          // Fallback: a single tab for the invoice's document_id, when available
           const entity = entityFor(event, "INVOICE");
           if (entity?.document_id) {
             const docId = entity.document_id;
-            const defaultType: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT" = "INVOICE";
             setDocumentTabs([{
               id: docId,
-              type: defaultType,
-              label: "Invoice (Faktur)",
-              badge: isDuplicate ? { label: "DUPLIKAT", color: "bg-rose-50 text-rose-700 border-rose-200" } : undefined,
+              type: "INVOICE",
+              label: "Invoice",
+              badge: isDuplicate ? { label: "DUPLICATE", tone: "error" } : undefined,
             }]);
             if (documentId !== docId) {
               onTabChange(docId as DocTab);
             }
           }
         }
-      })
-      .finally(() => setSegmentsLoading(false));
+      });
 
     return () => ctrl.abort();
   }, [event.ingest_batch_id, isDuplicate, isPODMissing]);
 
-  // Dynamic Tabs reflecting the actual state of this transaction
-  const dynamicTabs = useMemo(() => {
-    return documentTabs;
-  }, [documentTabs]);
-
   useEffect(() => {
     setRows([]);
-    setRowsError(null);
     if (!documentId) return;
     const ctrl = new AbortController();
     fetch(`${API_V1}/documents/${documentId}/evidence`, { signal: ctrl.signal })
@@ -277,8 +288,8 @@ export function EvidenceViewer({
         return r.json();
       })
       .then((body) => setRows(body.evidence || []))
-      .catch((e) => {
-        if (e.name !== "AbortError") setRowsError(e.message);
+      .catch(() => {
+        // Evidence rows are optional. Without them the viewer shows the page with no overlays.
       });
     return () => ctrl.abort();
   }, [documentId]);
@@ -319,7 +330,7 @@ export function EvidenceViewer({
       });
     };
 
-    // Use all rows since we're showing one document per tab
+    // All rows belong to the single document shown in this tab
     for (const r of rows) {
       if (r.bbox_x1 == null || r.bbox_y1 == null || r.bbox_x2 == null || r.bbox_y2 == null) continue;
       push(
@@ -330,7 +341,7 @@ export function EvidenceViewer({
         r.confidence
       );
     }
-    
+
     return out.sort((a, b) => a.page - b.page || a.bbox.y1 - b.bbox.y1);
   }, [rows, discrepantFields]);
 
@@ -360,105 +371,76 @@ export function EvidenceViewer({
     onSelectField(it.canonical);
   };
 
-  const active = items.find(isSelected) || null;
   const lastPage = Math.max(pageCount, 1);
 
-  const formatIDR = (val?: number | null) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(val || 0);
-  };
-
   return (
-    <Card className="flex flex-col h-full bg-white border border-slate-200 shadow-2xs overflow-hidden p-0">
-      {/* Header Bar with Document Tabs - One per document, no navigation buttons */}
-      <CardHeader className="p-2.5 border-b border-slate-100 bg-[#EDF4FA]/70 flex flex-row items-center justify-between gap-2">
+    <Card className="flex h-full flex-col overflow-hidden rounded-card border border-hairline bg-card p-0 text-ink shadow-none">
+      {/* Header bar with one tab per document */}
+      <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-hairline bg-surface-soft/70 p-2.5">
         <div className="flex items-center gap-1.5 overflow-x-auto">
-          {dynamicTabs.map((tab) => (
-            <Button
-              key={tab.id}
-              size="sm"
-              variant={documentId === tab.id ? "default" : "ghost"}
-              onClick={() => onTabChange(tab.id as DocTab)}
-              className={cn(
-                "text-xs h-7 px-2.5 font-bold cursor-pointer relative",
-                documentId === tab.id ? "bg-[#243A5E] text-white" : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              <span>{tab.label}</span>
-              {tab.badge && (
-                <span
-                  className={cn(
-                    "ml-1.5 text-[9px] px-1 py-0.2 rounded font-extrabold border",
-                    tab.badge.color || "bg-amber-100 text-amber-800 border-amber-200"
-                  )}
-                >
-                  {tab.badge.label}
-                </span>
-              )}
-            </Button>
-          ))}
+          {documentTabs.map((tab) => {
+            const isActive = documentId === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabChange(tab.id as DocTab)}
+                className={cn(
+                  "relative inline-flex h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-control px-2.5 text-[12px] font-semibold transition-colors",
+                  isActive ? "bg-navy text-white" : "text-body hover:bg-card hover:text-ink",
+                  focusRing
+                )}
+              >
+                <span>{tab.label}</span>
+                {tab.badge && <span className={chip(tab.badge.tone, "px-1.5 py-0 text-[9px]")}>{tab.badge.label}</span>}
+              </button>
+            );
+          })}
         </div>
 
         {fileUrl && (
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-slate-200">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-1 rounded-control border border-hairline bg-card px-1.5 py-0.5">
+              <IconButton
+                label="Previous page"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                title="Halaman sebelumnya"
               >
-                <ChevronLeft className="h-3 w-3" />
-              </Button>
-              <span className="text-[10px] font-mono font-bold text-slate-700 w-10 text-center">
+                <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+              </IconButton>
+              <span className="w-10 text-center text-[11px] font-semibold tabular-nums text-ink">
                 {page}/{lastPage}
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
+              <IconButton
+                label="Next page"
                 disabled={page >= lastPage}
                 onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-                title="Halaman berikutnya"
               >
-                <ChevronRight className="h-3 w-3" />
-              </Button>
+                <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+              </IconButton>
             </div>
-            <div className="flex items-center gap-1 bg-white px-1.5 py-0.5 rounded-lg border border-slate-200">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setZoom((z) => Math.max(z - 15, 60))}
-                className="h-6 w-6"
-                title="Zoom Out"
+            <div className="flex items-center gap-1 rounded-control border border-hairline bg-card px-1.5 py-0.5">
+              <IconButton label="Zoom out" onClick={() => setZoom((z) => Math.max(z - 15, 60))}>
+                <ZoomOut className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+              </IconButton>
+              <span className="w-8 text-center text-[11px] font-semibold tabular-nums text-ink">{zoom}%</span>
+              <IconButton label="Zoom in" onClick={() => setZoom((z) => Math.min(z + 15, 240))}>
+                <ZoomIn className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+              </IconButton>
+              <button
+                type="button"
+                onClick={() => setZoom(100)}
+                className={cn("h-6 rounded-pop px-1.5 text-[11px] font-semibold text-body hover:bg-surface-soft hover:text-ink", focusRing)}
               >
-                <ZoomOut className="h-3 w-3" />
-              </Button>
-              <span className="text-[10px] font-mono font-bold text-slate-700 w-8 text-center">{zoom}%</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setZoom((z) => Math.min(z + 15, 240))}
-                className="h-6 w-6"
-                title="Zoom In"
-              >
-                <ZoomIn className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setZoom(100)} className="h-6 px-1.5 text-[10px]">
                 Reset
-              </Button>
+              </button>
             </div>
           </div>
         )}
       </CardHeader>
 
-      {/* Main Content Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      {/* Main content */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {fileUrl ? (
           <DocumentPageView
             fileUrl={fileUrl}
@@ -472,88 +454,84 @@ export function EvidenceViewer({
             }}
           />
         ) : (
-          /* Canonical Document Proof Sheet */
-          <div className="p-6 h-full flex flex-col justify-start space-y-5 bg-slate-50/50">
-            {/* 1. TAB INVOICE */}
+          /* Canonical document proof sheet */
+          <div className="flex h-full flex-col justify-start space-y-5 bg-canvas p-6">
+            {/* 1. Invoice */}
             {activeDocumentTab === "INVOICE" && (
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 space-y-5">
-                <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="space-y-5 rounded-card border border-hairline bg-card p-6">
+                <div className="flex items-start justify-between gap-4 border-b border-hairline pb-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#243A5E] bg-blue-50 px-2 py-0.5 rounded">
-                      Faktur Penagihan 3PL Resmi
+                    <span className={chip("navy", "px-2 py-0.5 text-[10px] uppercase tracking-[.08em]")}>
+                      Official 3PL invoice
                     </span>
-                    <h3 className="text-xl font-mono font-black text-slate-900 mt-1">
+                    <h3 className="mt-1 text-[20px] font-semibold tabular-nums text-ink">
                       {event.invoice.invoice_number || "INV-UNKNOWN"}
                     </h3>
-                    <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      <span>Tanggal Faktur: {event.invoice.invoice_date || "-"}</span>
+                    <p className="flex items-center gap-1.5 text-[12px] font-medium text-body">
+                      <Calendar className="h-3.5 w-3.5 text-muted" strokeWidth={1.75} aria-hidden="true" />
+                      <span>Invoice date: {event.invoice.invoice_date || "-"}</span>
                     </p>
                   </div>
 
-                  <div className="text-right space-y-1">
+                  <div className="space-y-1 text-right">
                     {isDuplicate && (
-                      <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-xs font-bold gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        <span>Faktur Terindikasi Duplikat</span>
-                      </Badge>
+                      <span className={chip("error", "gap-1")}>
+                        <AlertTriangle className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                        <span>Duplicate invoice detected</span>
+                      </span>
                     )}
-                    <div className="text-xs text-slate-500">
-                      Status Rekonsiliasi:{" "}
-                      <span className="font-bold text-slate-800">{event.reconciliation.status}</span>
+                    <div className="text-[12px] text-body">
+                      Reconciliation status:{" "}
+                      <span className="font-semibold text-ink">{event.reconciliation.status}</span>
                     </div>
                   </div>
                 </div>
 
                 {isDuplicate && (
-                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-start gap-2.5">
-                    <ShieldAlert className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-2.5 rounded-control border border-error/40 bg-error-soft p-3.5 text-[13px] text-error-ink">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
                     <div>
-                      <strong className="font-bold block">Peringatan Integritas Duplikasi Faktur:</strong>
-                      Nomor shipment yang sama ({event.shipment_id}) telah terdeteksi pada dokumen invoice lain.
-                      Buka jejak audit untuk memverifikasi nomor invoice sumber sebelum mengambil keputusan.
+                      <strong className="block font-semibold">Duplicate invoice warning:</strong>
+                      The same shipment number ({event.shipment_id}) was found on another invoice. Open the audit
+                      trail to verify the source invoice number before deciding.
                     </div>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="grid grid-cols-2 gap-4 rounded-control border border-hairline bg-canvas p-4 text-[12px]">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-slate-400">Penerbit Faktur (Vendor)</span>
-                    <p className="font-bold text-slate-800 text-sm">{event.invoice.vendor_name || event.vendor_id}</p>
-                    <p className="text-[11px] text-slate-500 font-mono">ID: {event.invoice.vendor_id}</p>
+                    <span className={labelClass}>Issuer (vendor)</span>
+                    <p className="text-[14px] font-semibold text-ink">{event.invoice.vendor_name || event.vendor_id}</p>
+                    <p className="text-[11px] tabular-nums text-body">ID: {event.invoice.vendor_id}</p>
                   </div>
                   <div className="space-y-1 text-right">
-                    <span className="text-[10px] font-bold uppercase text-slate-400">Nomor Pengiriman (Shipment)</span>
-                    <p className="font-bold text-slate-800 font-mono text-sm">{event.shipment_id}</p>
-                    <p className="text-[11px] text-slate-500">
-                      Rute: {event.invoice.origin} → {event.invoice.destination}
+                    <span className={labelClass}>Shipment number</span>
+                    <p className="text-[14px] font-semibold tabular-nums text-ink">{event.shipment_id}</p>
+                    <p className="text-[11px] text-body">
+                      Route: {event.invoice.origin} → {event.invoice.destination}
                     </p>
                   </div>
                 </div>
 
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                <div className="overflow-hidden rounded-panel border border-hairline">
+                  <table className="w-full text-left">
+                    <thead>
                       <tr>
-                        <th className="py-2.5 px-3">Uraian Tagihan</th>
-                        <th className="py-2.5 px-3 text-right">Berat Tagih</th>
-                        <th className="py-2.5 px-3 text-right">Total Nilai Tagih</th>
+                        <th className={th}>Charge description</th>
+                        <th className={cn(th, "text-right")}>Billed weight</th>
+                        <th className={cn(th, "text-right")}>Billed amount</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
+                    <tbody>
                       <tr>
-                        <td className="py-3 px-3">
-                          <span className="font-bold text-slate-800 block">Jasa Angkut Logistik Cargo Darat/Udara</span>
-                          <span className="text-[11px] text-slate-400">
+                        <td className={td}>
+                          <span className="block font-semibold text-ink">Land and air cargo freight service</span>
+                          <span className="text-[11px] text-muted">
                             Shipment Ref: {event.shipment_id} ({event.invoice.origin} - {event.invoice.destination})
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-700">
-                          {event.invoice.weight_billed_kg} kg
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono font-black text-slate-900 text-sm">
-                          {formatIDR(event.invoice.billed_amount)}
-                        </td>
+                        <td className={cn(td, "text-right font-semibold")}>{event.invoice.weight_billed_kg} kg</td>
+                        <td className={cn(td, "text-right font-semibold")}>{formatIDR(event.invoice.billed_amount)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -561,164 +539,175 @@ export function EvidenceViewer({
               </div>
             )}
 
-            {/* 2. TAB SURAT JALAN */}
+            {/* 2. Delivery note */}
             {activeDocumentTab === "SURAT_JALAN" && (
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 space-y-5">
-                <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="space-y-5 rounded-card border border-hairline bg-card p-6">
+                <div className="flex items-start justify-between gap-4 border-b border-hairline pb-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#243A5E] bg-blue-50 px-2 py-0.5 rounded">
-                      Surat Jalan Pengiriman (SJ)
+                    <span className={chip("navy", "px-2 py-0.5 text-[10px] uppercase tracking-[.08em]")}>
+                      Delivery note (SJ)
                     </span>
-                    <h3 className="text-xl font-mono font-black text-slate-900 mt-1">
+                    <h3 className="mt-1 text-[20px] font-semibold tabular-nums text-ink">
                       {event.shipment.surat_jalan_number || "SJ-" + event.shipment_id}
                     </h3>
-                    <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-                      <Truck className="h-3.5 w-3.5 text-slate-400" />
-                      <span>Tanggal Pengiriman: {event.shipment.shipment_date || "-"}</span>
+                    <p className="flex items-center gap-1.5 text-[12px] font-medium text-body">
+                      <Truck className="h-3.5 w-3.5 text-muted" strokeWidth={1.75} aria-hidden="true" />
+                      <span>Shipment date: {event.shipment.shipment_date || "-"}</span>
                     </p>
                   </div>
-                  <Badge variant="outline" className="text-xs font-bold border-slate-300">
-                    Operasional Terverifikasi
-                  </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="grid grid-cols-2 gap-4 rounded-control border border-hairline bg-canvas p-4 text-[12px]">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1">
-                      <MapPin className="h-3 w-3 text-emerald-600" />
-                      <span>Kota Asal (Origin)</span>
+                    <span className={cn(labelClass, "flex items-center gap-1")}>
+                      <MapPin className="h-3 w-3 text-teal-ink" strokeWidth={1.75} aria-hidden="true" />
+                      <span>Origin city</span>
                     </span>
-                    <p className="font-bold text-slate-800 text-sm">{event.shipment.origin}</p>
+                    <p className="text-[14px] font-semibold text-ink">{event.shipment.origin}</p>
                   </div>
                   <div className="space-y-1 text-right">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 flex items-center justify-end gap-1">
-                      <MapPin className="h-3 w-3 text-rose-600" />
-                      <span>Kota Tujuan (Destination)</span>
+                    <span className={cn(labelClass, "flex items-center justify-end gap-1")}>
+                      <MapPin className="h-3 w-3 text-error-ink" strokeWidth={1.75} aria-hidden="true" />
+                      <span>Destination city</span>
                     </span>
-                    <p className="font-bold text-slate-800 text-sm">{event.shipment.destination}</p>
+                    <p className="text-[14px] font-semibold text-ink">{event.shipment.destination}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Berat Aktual Timbangan</span>
-                    <span className="font-mono text-base font-extrabold text-slate-800 mt-1 block">
+                  <div className="rounded-control border border-hairline bg-card p-3.5">
+                    <span className={labelClass}>Actual scale weight</span>
+                    <span className="mt-1 block text-[16px] font-semibold tabular-nums text-ink">
                       {event.shipment.weight_actual_kg} kg
                     </span>
                   </div>
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Jumlah Koli / Paket</span>
-                    <span className="font-mono text-base font-extrabold text-slate-800 mt-1 block">
-                      {event.shipment.total_packages} Koli
+                  <div className="rounded-control border border-hairline bg-card p-3.5">
+                    <span className={labelClass}>Packages</span>
+                    <span className="mt-1 block text-[16px] font-semibold tabular-nums text-ink">
+                      {event.shipment.total_packages} packages
                     </span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* 3. TAB POD (BUKTI KIRIM) */}
+            {/* 3. Proof of delivery */}
             {activeDocumentTab === "POD" && (
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 space-y-5">
-                <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="space-y-5 rounded-card border border-hairline bg-card p-6">
+                <div className="flex items-start justify-between gap-4 border-b border-hairline pb-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#243A5E] bg-blue-50 px-2 py-0.5 rounded">
+                    <span className={chip("navy", "px-2 py-0.5 text-[10px] uppercase tracking-[.08em]")}>
                       Proof of Delivery (POD)
                     </span>
-                    <h3 className="text-xl font-mono font-black text-slate-900 mt-1">
+                    <h3 className="mt-1 text-[20px] font-semibold tabular-nums text-ink">
                       {event.pod.pod_number || "POD-" + event.shipment_id}
                     </h3>
                   </div>
 
                   {isPODMissing ? (
-                    <Badge className="bg-rose-600 text-white border-rose-700 text-xs font-black">
-                      POD TIDAK DITEMUKAN
-                    </Badge>
+                    <span className={chip("solidError", "text-[11px]")}>POD NOT FOUND</span>
                   ) : (
-                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-bold">
-                      DELIVERED &amp; TERVERIFIKASI
-                    </Badge>
+                    <span className={chip("success", "text-[11px]")}>{event.pod.delivery_status || "DELIVERED"}</span>
                   )}
                 </div>
 
                 {isPODMissing ? (
-                  <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-2">
-                    <div className="flex items-center gap-2 text-rose-800 font-bold text-xs">
-                      <XCircle className="h-4 w-4 text-rose-600 shrink-0" />
-                      <span>Berkas Bukti Serah Terima (POD) Tidak Ditemukan (MISSING_POD)</span>
+                  <div className="space-y-2 rounded-control border border-error/40 bg-error-soft p-4">
+                    <div className="flex items-center gap-2 text-[13px] font-semibold text-error-ink">
+                      <XCircle className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                      <span>Proof of Delivery (POD) not found (MISSING_POD)</span>
                     </div>
-                    <p className="text-xs text-rose-700 leading-relaxed">
-                      Sistem tidak mendeteksi adanya bukti tanda terima fisik / digital yang sah untuk nomor pengiriman ini.
-                      Sesuai PKS pasal 7.2, tagihan pengiriman tanpa bukti POD berstatus <strong>INSUFFICIENT_EVIDENCE</strong>{" "}
-                      dan ditolak untuk pembayaran hingga berkas bertanda tangan penerima diserahkan.
+                    <p className="text-[13px] leading-relaxed text-error-ink">
+                      The system found no valid physical or digital proof of receipt for this shipment number. Under
+                      PKS clause 7.2, a shipment invoice without POD proof is marked{" "}
+                      <strong>INSUFFICIENT_EVIDENCE</strong> and rejected for payment until a receiver-signed document
+                      is provided.
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <div className="grid grid-cols-2 gap-3 rounded-control border border-hairline bg-canvas p-4 text-[12px]">
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-slate-400">Penerima Barang</span>
-                      <p className="font-bold text-slate-800 text-sm mt-0.5">{event.pod.receiver_name}</p>
+                      <span className={labelClass}>Receiver</span>
+                      <p className="mt-0.5 text-[14px] font-semibold text-ink">{event.pod.receiver_name}</p>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-bold uppercase text-slate-400">Tanggal Serah Terima</span>
-                      <p className="font-bold text-slate-800 font-mono text-sm mt-0.5">{event.pod.delivery_date}</p>
+                      <span className={labelClass}>Delivery date</span>
+                      <p className="mt-0.5 text-[14px] font-semibold tabular-nums text-ink">{event.pod.delivery_date}</p>
                     </div>
-                    <div className="col-span-2 pt-2 border-t border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-xs">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Tanda Tangan &amp; Stempel Basah Lengkap</span>
+                    <div className="col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={chip(event.pod.signature_present ? "success" : "error", "gap-1")}>
+                          {event.pod.signature_present ? (
+                            <CheckCircle2 className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                          ) : (
+                            <XCircle className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                          )}
+                          Signature {event.pod.signature_present ? "present" : "missing"}
+                        </span>
+                        <span className={chip(event.pod.stamp_present ? "success" : "error", "gap-1")}>
+                          {event.pod.stamp_present ? (
+                            <CheckCircle2 className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                          ) : (
+                            <XCircle className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                          )}
+                          Stamp {event.pod.stamp_present ? "present" : "missing"}
+                        </span>
                       </div>
-                      <span className="text-[11px] text-slate-500 font-mono">Confidence: 95.0%</span>
+                      <span className="text-[11px] tabular-nums text-body">
+                        Signature confidence:{" "}
+                        {typeof event.pod.signature_confidence === "number"
+                          ? `${(event.pod.signature_confidence * 100).toFixed(1)}%`
+                          : "N/A"}
+                      </span>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* 4. TAB RATE AGREEMENT (PKS) */}
+            {/* 4. Rate agreement (PKS) */}
             {activeDocumentTab === "RATE_AGREEMENT" && (
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 space-y-5">
-                <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="space-y-5 rounded-card border border-hairline bg-card p-6">
+                <div className="flex items-start justify-between gap-4 border-b border-hairline pb-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#243A5E] bg-blue-50 px-2 py-0.5 rounded">
-                      Perjanjian Kerjasama (PKS) / Rate Card
+                    <span className={chip("navy", "px-2 py-0.5 text-[10px] uppercase tracking-[.08em]")}>
+                      Rate agreement (PKS) / rate card
                     </span>
-                    <h3 className="text-xl font-mono font-black text-slate-900 mt-1">
+                    <h3 className="mt-1 text-[20px] font-semibold tabular-nums text-ink">
                       {event.contract.agreement_id}
                     </h3>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Mitra: <strong className="text-slate-800">{event.invoice.vendor_name || event.vendor_id}</strong>
+                    <p className="text-[12px] font-medium text-body">
+                      Partner: <strong className="font-semibold text-ink">{event.invoice.vendor_name || event.vendor_id}</strong>
                     </p>
                   </div>
-                  <Badge variant="outline" className="text-xs font-bold border-slate-300">
-                    PKS Aktif (2026)
-                  </Badge>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                <div className="grid grid-cols-3 gap-3 rounded-control border border-hairline bg-canvas p-4 text-center text-[12px]">
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-400">Tarif Disepakati</span>
-                    <p className="font-extrabold text-slate-800 text-sm font-mono mt-1">
+                    <span className={labelClass}>Agreed rate</span>
+                    <p className="mt-1 text-[14px] font-semibold tabular-nums text-ink">
                       {formatIDR(event.contract.base_rate)}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-400">Batas Dispute</span>
-                    <p className="font-extrabold text-slate-800 text-sm font-mono mt-1">
-                      {event.contract.dispute_window_days} Hari
+                    <span className={labelClass}>Dispute window</span>
+                    <p className="mt-1 text-[14px] font-semibold tabular-nums text-ink">
+                      {event.contract.dispute_window_days} days
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-400">Fuel Surcharge Cap</span>
-                    <p className="font-extrabold text-slate-800 text-sm font-mono mt-1">
+                    <span className={labelClass}>Fuel surcharge cap</span>
+                    <p className="mt-1 text-[14px] font-semibold tabular-nums text-ink">
                       {event.contract.applicable_fuel_surcharge_percent}%
                     </p>
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
-                  <strong>Klausul Validasi Tarif:</strong> Seluruh tagihan invoice wajib mengacu pada matriks rute dan
-                  berat aktual timbangan yang tercatat di Surat Jalan dan diverifikasi oleh POD penerima. Sengketa atas
-                  selisih tarif wajib diajukan maksimal {event.contract.dispute_window_days} hari sejak faktur terbit.
+                <div className="rounded-control border border-hairline p-3.5 text-[13px] leading-relaxed text-body">
+                  <strong className="font-semibold text-ink">Rate validation clause:</strong> Every invoice charge must
+                  follow the route matrix and the actual scale weight recorded on the delivery note and verified by the
+                  receiver&apos;s POD. Rate disputes must be filed within {event.contract.dispute_window_days} days of the
+                  invoice date.
                 </div>
               </div>
             )}

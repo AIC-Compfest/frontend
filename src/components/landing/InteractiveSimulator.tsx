@@ -116,7 +116,7 @@ export function InteractiveSimulator({
             <p className="text-sm font-semibold tracking-[.16em] text-[#0077CC]">
               SEE THE TRACE
             </p>
-            <h2 className="mt-7 font-display text-5xl leading-[.98] tracking-tight text-[#12203A] md:text-7xl">
+            <h2 className="mt-7 font-display text-[2.75rem] sm:text-3xl leading-[1.3] tracking-normal text-[#12203A] md:text-5xl">
               Watch one charge become a clear decision.
             </h2>
           </div>
@@ -153,9 +153,9 @@ export function InteractiveSimulator({
                 <div className="flex items-center justify-between border-b border-[#CDDBE8] pb-5">
                   <div>
                     <span className="font-mono text-[10px] uppercase tracking-widest text-[#7C879C]">
-                      Live case
+                      Example case
                     </span>
-                    <h3 className="mt-2 font-display text-3xl tracking-normal text-[#12203A]">
+                    <h3 className="mt-2 font-display text-2xl tracking-normal text-[#12203A]">
                       {selectedScenario.name}
                     </h3>
                     <p className="mt-1 text-sm text-[#55637A]">

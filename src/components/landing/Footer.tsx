@@ -14,7 +14,7 @@ export function Footer() {
             <p className="text-sm font-semibold tracking-[.16em] text-[#8FD7D4]">
               READY WHEN YOU ARE
             </p>
-            <h2 className="mt-7 font-display text-5xl leading-[.98] tracking-normal md:text-7xl">
+            <h2 className="mt-7 font-display text-[2.75rem] sm:text-3xl leading-[1.4] tracking-normal md:text-5xl">
               Make the next payment easier to defend.
             </h2>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">

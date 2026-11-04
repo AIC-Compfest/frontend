@@ -2,24 +2,21 @@
 
 import React, { useState } from "react";
 import { ShipmentEvent } from "@/types/reconciliation";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Calculator,
   AlertTriangle,
   CheckCircle2,
-  ShieldAlert,
   FileCheck2,
   ChevronDown,
   ChevronUp,
   ArrowRight,
-  TrendingDown,
-  Clock,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatIDR } from "@/lib/format";
+import { chip, ChipTone, btnOutline, focusRing, label as labelClass } from "@/lib/dashboard-ui";
 
 interface ReconciliationCardProps {
   event: ShipmentEvent;
@@ -28,6 +25,14 @@ interface ReconciliationCardProps {
   onOpenDisputePackage: () => void;
 }
 
+const STATUS_CHIP: Record<string, { tone: ChipTone; text: string }> = {
+  MATCH: { tone: "success", text: "MATCH" },
+  APPROVED: { tone: "solidSuccess", text: "APPROVED" },
+  EXCEPTION: { tone: "error", text: "EXCEPTION" },
+  DUPLICATE: { tone: "navy", text: "DUPLICATE" },
+  INSUFFICIENT_EVIDENCE: { tone: "warning", text: "UNCONFIRMED" },
+};
+
 export function ReconciliationCard({
   event,
   onViewProof,
@@ -35,67 +40,35 @@ export function ReconciliationCard({
   onOpenDisputePackage,
 }: ReconciliationCardProps) {
   const [showTrace, setShowTrace] = useState(true);
-  const [showChecks, setShowChecks] = useState(false);
-
-  const formatIDR = (val: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(val || 0);
-  };
 
   const billed = event?.invoice?.billed_amount || 0;
   const expected = event?.pricing?.expected_total_charge || 0;
-  const variance = (billed - expected) !== 0 
-    ? (billed - expected) 
+  const variance = (billed - expected) !== 0
+    ? (billed - expected)
     : (event?.pricing?.difference_amount ?? 0);
   const absVariance = Math.abs(variance);
-  const variancePct = expected > 0 ? ((absVariance / expected) * 100).toFixed(2) : "0.00";
   const discrepancies = event?.reconciliation?.discrepancies || [];
+  const statusChip = STATUS_CHIP[event?.reconciliation?.status ?? ""];
 
   return (
-    <Card className="flex flex-col h-full bg-white border border-slate-200 shadow-2xs overflow-hidden p-0">
-      {/* Transaction Header - Minimal */}
-      <CardHeader className="p-4 pb-3 border-b border-slate-200 bg-white space-y-1.5">
+    <Card className="flex h-full flex-col overflow-hidden rounded-card border border-hairline bg-card p-0 text-ink shadow-none">
+      {/* Transaction header */}
+      <CardHeader className="space-y-1.5 border-b border-hairline bg-card p-4 pb-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-base font-extrabold text-slate-900 font-mono">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="font-semibold tabular-nums tracking-normal text-[16px] text-ink">
               {event?.invoice?.invoice_number || event?.shipment_id || "INV-UNKNOWN"}
             </CardTitle>
-            {event?.reconciliation?.status === "MATCH" && (
-              <Badge variant="success" className="text-[10px] font-bold py-0">
-                MATCH
-              </Badge>
-            )}
-            {event?.reconciliation?.status === "APPROVED" && (
-              <Badge variant="success" className="text-[10px] font-bold py-0 bg-emerald-600 text-white">
-                APPROVED
-              </Badge>
-            )}
-            {event?.reconciliation?.status === "EXCEPTION" && (
-              <Badge variant="destructive" className="text-[10px] font-bold py-0">
-                EXCEPTION
-              </Badge>
-            )}
-            {event?.reconciliation?.status === "DUPLICATE" && (
-              <Badge variant="brand" className="text-[10px] font-bold py-0">
-                DUPLICATE
-              </Badge>
-            )}
-            {event?.reconciliation?.status === "INSUFFICIENT_EVIDENCE" && (
-              <Badge variant="warning" className="text-[10px] font-bold py-0">
-                UNCONFIRMED
-              </Badge>
-            )}
+            {statusChip && <span className={chip(statusChip.tone)}>{statusChip.text}</span>}
           </div>
 
           <div className="text-right">
-            <div className="text-xs font-semibold text-slate-900">
-              Priority Score: <span className="font-mono text-rose-600 font-bold">{(event?.reconciliation?.priority_score ?? 0).toFixed(0)}</span>/100
+            <div className="text-[12px] font-semibold text-ink">
+              Priority score: <span className="font-bold tabular-nums text-error-ink">{(event?.reconciliation?.priority_score ?? 0).toFixed(0)}</span>/100
             </div>
-            <div className="text-[11px] text-slate-600 mt-0.5">
-              Deadline: <strong className={(event?.reconciliation?.days_remaining_to_dispute ?? 14) <= 7 ? "text-rose-600 font-bold" : "text-slate-700 font-medium"}>
+            <div className="mt-0.5 text-[12px] text-body">
+              Deadline:{" "}
+              <strong className={(event?.reconciliation?.days_remaining_to_dispute ?? 14) <= 7 ? "font-bold text-error-ink" : "font-medium text-ink"}>
                 {event?.reconciliation?.days_remaining_to_dispute ?? 14}d
               </strong>
             </div>
@@ -103,117 +76,117 @@ export function ReconciliationCard({
         </div>
       </CardHeader>
 
-      {/* Main Content Area */}
-      <CardContent className="flex-1 p-4 space-y-4 overflow-y-auto">
-        {/* Financial Comparison Summary */}
-        <div className="grid grid-cols-3 gap-3 p-3 bg-white rounded-lg border border-slate-200">
+      {/* Main content */}
+      <CardContent className="flex-1 space-y-4 overflow-y-auto p-4">
+        {/* Financial comparison */}
+        <div className="grid grid-cols-3 gap-3 rounded-control border border-hairline bg-card p-3">
           <div>
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Billed Amount</div>
-            <div className="text-sm font-bold font-tabular text-slate-900 mt-1">{formatIDR(billed)}</div>
+            <div className={labelClass}>Billed amount</div>
+            <div className="mt-1 text-[14px] font-semibold tabular-nums text-ink">{formatIDR(billed)}</div>
           </div>
 
           <div>
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Expected Amount</div>
-            <div className="text-sm font-bold font-tabular text-slate-900 mt-1">{formatIDR(expected)}</div>
+            <div className={labelClass}>Expected amount</div>
+            <div className="mt-1 text-[14px] font-semibold tabular-nums text-ink">{formatIDR(expected)}</div>
           </div>
 
-          <div className={absVariance > 0 ? (variance > 0 ? "text-rose-600" : "text-amber-600") : "text-emerald-600"}>
-            <div className="text-[10px] font-bold uppercase tracking-wider">Variance</div>
-            <div className="text-sm font-bold font-tabular mt-1">
+          <div className={absVariance > 0 ? (variance > 0 ? "text-error-ink" : "text-warning-ink") : "text-teal-ink"}>
+            <div className="text-[12px] font-semibold uppercase tracking-[.08em]">Variance</div>
+            <div className="mt-1 text-[14px] font-semibold tabular-nums">
               {variance > 0
                 ? `+${formatIDR(variance)}`
                 : variance < 0
                 ? `-${formatIDR(absVariance)}`
-                : "Rp 0"}
+                : formatIDR(0)}
             </div>
           </div>
         </div>
 
-        {/* Mapped Fields */}
+        {/* Mapped fields */}
         <div className="space-y-2">
-          <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
-            <Sparkles className="h-3.5 w-3.5 text-slate-600" />
-            <span>Mapped Fields</span>
+          <span className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.08em] text-ink">
+            <Sparkles className="h-3.5 w-3.5 text-body" strokeWidth={1.75} aria-hidden="true" />
+            <span>Mapped fields</span>
           </span>
-          
-          <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50/50 rounded-lg border border-slate-200 text-xs">
-            {/* Invoice Fields */}
+
+          <div className="grid grid-cols-2 gap-3 rounded-control border border-hairline bg-canvas p-3 text-[12px]">
+            {/* Invoice */}
             <div className="space-y-2">
-              <div className="font-semibold text-slate-700 uppercase text-[10px] tracking-wider">Invoice</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Invoice</div>
               <div className="space-y-1.5">
                 {event?.invoice?.invoice_number && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Invoice #:</span>
-                    <span className="font-mono font-semibold text-slate-900">{event.invoice.invoice_number}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">Invoice #:</span>
+                    <span className="font-semibold tabular-nums text-ink">{event.invoice.invoice_number}</span>
                   </div>
                 )}
                 {event?.invoice?.billed_amount && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Billed:</span>
-                    <span className="font-mono font-semibold text-slate-900">{formatIDR(event.invoice.billed_amount)}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">Billed:</span>
+                    <span className="font-semibold tabular-nums text-ink">{formatIDR(event.invoice.billed_amount)}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Shipment Fields */}
+            {/* Shipment */}
             <div className="space-y-2">
-              <div className="font-semibold text-slate-700 uppercase text-[10px] tracking-wider">Shipment</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Shipment</div>
               <div className="space-y-1.5">
                 {event?.shipment?.shipment_id && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">ID:</span>
-                    <span className="font-mono font-semibold text-slate-900 truncate">{event.shipment.shipment_id}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">ID:</span>
+                    <span className="truncate font-semibold tabular-nums text-ink">{event.shipment.shipment_id}</span>
                   </div>
                 )}
                 {event?.shipment?.weight_actual_kg && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Weight:</span>
-                    <span className="font-mono font-semibold text-slate-900">{event.shipment.weight_actual_kg} kg</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">Weight:</span>
+                    <span className="font-semibold tabular-nums text-ink">{event.shipment.weight_actual_kg} kg</span>
                   </div>
                 )}
                 {event?.shipment?.origin && event?.shipment?.destination && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Route:</span>
-                    <span className="font-mono font-semibold text-slate-900 text-right">{event.shipment.origin} → {event.shipment.destination}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">Route:</span>
+                    <span className="text-right font-semibold text-ink">{event.shipment.origin} → {event.shipment.destination}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Contract Fields */}
+            {/* Contract */}
             <div className="space-y-2">
-              <div className="font-semibold text-slate-700 uppercase text-[10px] tracking-wider">Contract</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Contract</div>
               <div className="space-y-1.5">
                 {event?.contract?.base_rate && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Base Rate:</span>
-                    <span className="font-mono font-semibold text-slate-900">{formatIDR(event.contract.base_rate)}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">Base rate:</span>
+                    <span className="font-semibold tabular-nums text-ink">{formatIDR(event.contract.base_rate)}</span>
                   </div>
                 )}
                 {event?.contract?.applicable_fuel_surcharge_percent !== undefined && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Fuel Surcharge:</span>
-                    <span className="font-mono font-semibold text-slate-900">{event.contract.applicable_fuel_surcharge_percent}%</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">Fuel surcharge:</span>
+                    <span className="font-semibold tabular-nums text-ink">{event.contract.applicable_fuel_surcharge_percent}%</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Pricing Fields */}
+            {/* Pricing */}
             <div className="space-y-2">
-              <div className="font-semibold text-slate-700 uppercase text-[10px] tracking-wider">Pricing</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Pricing</div>
               <div className="space-y-1.5">
                 {event?.pricing?.expected_total_charge && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Expected:</span>
-                    <span className="font-mono font-semibold text-slate-900">{formatIDR(event.pricing.expected_total_charge)}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">Expected:</span>
+                    <span className="font-semibold tabular-nums text-ink">{formatIDR(event.pricing.expected_total_charge)}</span>
                   </div>
                 )}
                 {event?.pricing?.difference_amount !== undefined && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Diff:</span>
-                    <span className={`font-mono font-semibold ${event.pricing.difference_amount >= 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-body">Diff:</span>
+                    <span className={cn("font-semibold tabular-nums", event.pricing.difference_amount >= 0 ? "text-error-ink" : "text-teal-ink")}>
                       {event.pricing.difference_amount >= 0 ? "+" : ""}{formatIDR(event.pricing.difference_amount)}
                     </span>
                   </div>
@@ -223,58 +196,53 @@ export function ReconciliationCard({
           </div>
         </div>
 
-        {/* Discrepancies List */}
+        {/* Discrepancies */}
         {discrepancies.length > 0 ? (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
-                <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-                <span>Identified Discrepancies ({discrepancies.length})</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.08em] text-ink">
+                <AlertTriangle className="h-3.5 w-3.5 text-error-ink" strokeWidth={1.75} aria-hidden="true" />
+                <span>Identified discrepancies ({discrepancies.length})</span>
               </span>
               <Button
+                type="button"
                 variant="outline"
-                size="sm"
                 onClick={onOpenDisputePackage}
-                className="text-[11px] h-7 px-2.5 font-bold text-rose-600 border-rose-300 hover:bg-rose-50 gap-1"
+                className={cn(btnOutline, "h-7 gap-1 px-2.5 text-[12px] text-error-ink")}
               >
-                <FileCheck2 className="h-3 w-3" />
+                <FileCheck2 className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
                 <span>Generate Dispute Package</span>
               </Button>
             </div>
 
             <div className="space-y-2">
               {discrepancies.map((disc, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 bg-white rounded-lg border border-slate-200 space-y-2"
-                >
+                <div key={idx} className="space-y-2 rounded-control border border-hairline bg-card p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="destructive" className="text-[9px] py-0 font-mono">
-                          {disc.code}
-                        </Badge>
-                        <span className="text-xs font-semibold text-slate-900">{disc.description}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={chip("error", "text-[10px] tabular-nums")}>{disc.code}</span>
+                        <span className="text-[13px] font-semibold text-ink">{disc.description}</span>
                       </div>
                       {disc.remediation_hint && (
-                        <p className="text-[11px] text-slate-600 mt-1 leading-normal">
-                          <strong>Remediasi:</strong> {disc.remediation_hint}
+                        <p className="mt-1 text-[12px] leading-normal text-body">
+                          <strong className="font-semibold text-ink">Remediation:</strong> {disc.remediation_hint}
                         </p>
                       )}
                     </div>
 
-                    {disc.delta_amount && (
-                      <span className="text-xs font-bold text-rose-600 font-tabular shrink-0">
+                    {disc.delta_amount ? (
+                      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-error-ink">
                         +{formatIDR(disc.delta_amount)}
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
-                  {/* 2-Click View Proof Button */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
+                  {/* Proof jump */}
+                  <div className="flex items-center justify-end border-t border-hairline pt-2">
                     <Button
+                      type="button"
                       variant="ghost"
-                      size="sm"
                       onClick={() => {
                         if (disc.code === "RATE_OVERCHARGE") onViewProof("billed_amount", "INVOICE");
                         else if (disc.code === "WRONG_ZONE") onViewProof("destination", "SURAT_JALAN");
@@ -283,10 +251,10 @@ export function ReconciliationCard({
                         else if (disc.code === "QUANTITY_MISMATCH") onViewProof("quantity_received", "POD");
                         else onViewProof("billed_amount", "INVOICE");
                       }}
-                      className="text-[11px] h-6 px-2 text-slate-700 hover:text-slate-900 font-bold hover:bg-slate-100 gap-1"
+                      className={cn("h-6 gap-1 px-2 text-[12px] font-semibold text-ink hover:bg-surface-soft", focusRing)}
                     >
                       <span>View Proof in Document</span>
-                      <ArrowRight className="h-3 w-3" />
+                      <ArrowRight className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
                     </Button>
                   </div>
                 </div>
@@ -294,28 +262,37 @@ export function ReconciliationCard({
             </div>
           </div>
         ) : (
-          <div className="p-3 bg-white rounded-lg border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2 font-medium">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Semua 13 verifikasi aturan tarif dan bukti logistik 100% cocok (Clean Match).</span>
+          <div className="flex items-center gap-2 rounded-control border border-teal/50 bg-teal-soft p-3 text-[13px] font-medium text-teal-ink">
+            <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span>All rate and logistics evidence checks match (Clean Match).</span>
           </div>
         )}
       </CardContent>
 
-      {/* Deterministic Price Calculation Trace - Accordion */}
-      <div className="border-t border-slate-200 bg-white">
+      {/* Deterministic price calculation trace */}
+      <div className="border-t border-hairline bg-card">
         <button
+          type="button"
+          aria-expanded={showTrace}
           onClick={() => setShowTrace(!showTrace)}
-          className="w-full p-3 bg-slate-50/60 hover:bg-slate-100 transition-colors flex items-center justify-between text-xs font-bold text-slate-900 cursor-pointer"
+          className={cn(
+            "flex w-full cursor-pointer items-center justify-between bg-canvas p-3 text-[13px] font-semibold text-ink transition-colors hover:bg-surface-soft",
+            focusRing
+          )}
         >
           <span className="flex items-center gap-1.5">
-            <Calculator className="h-3.5 w-3.5 text-slate-700" />
+            <Calculator className="h-3.5 w-3.5 text-body" strokeWidth={1.75} aria-hidden="true" />
             <span>Deterministic price calculation trace</span>
           </span>
-          {showTrace ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+          {showTrace ? (
+            <ChevronUp className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted" strokeWidth={1.75} aria-hidden="true" />
+          )}
         </button>
 
         {showTrace && (
-          <div className="p-3 bg-slate-900 text-slate-300 font-mono text-[11px] space-y-1 leading-relaxed overflow-x-auto">
+          <div className="space-y-1 overflow-x-auto bg-navy-deep p-3 font-mono text-[11px] leading-relaxed text-navy-soft">
             {(() => {
               const trace = event?.pricing?.trace;
               const baseRate = trace?.base_rate_unit ?? event?.contract?.base_rate;
@@ -329,20 +306,21 @@ export function ReconciliationCard({
               const taxAmt = trace?.tax_amount ?? event?.pricing?.expected_tax;
               const expTotal = trace?.expected_total ?? event?.pricing?.expected_total_charge;
               const billTotal = trace?.billed_total ?? event?.invoice?.billed_amount;
-              const tier = trace?.weight_tier ?? "Tidak tersedia";
-              const idr = (amount: number | undefined) => amount === undefined ? "Tidak tersedia" : amount.toLocaleString("id-ID");
-              const value = (amount: number | undefined, suffix = "") => amount === undefined ? "Tidak tersedia" : `${amount}${suffix}`;
+              const tier = trace?.weight_tier ?? "Not available";
+              const money = (amount: number | undefined) =>
+                amount === undefined ? "Not available" : `IDR ${amount.toLocaleString("en-US")}`;
+              const value = (amount: number | undefined, suffix = "") => amount === undefined ? "Not available" : `${amount}${suffix}`;
 
               return (
                 <>
-                  <div className="text-cyan-400 font-bold">--- INTEGER IDR MATHEMATICAL AUDIT TRACE ---</div>
-                  <div>Base Rate Tariff : Rp {idr(baseRate)} ({tier})</div>
-                  <div>Weight Used Scale: {value(weight, " kg")} ➔ Base: Rp {idr(baseAmt)}</div>
-                  <div>Fuel Surcharge   : {value(fuelPct, "%")} ➔ Rp {idr(fuelAmt)}</div>
-                  <div>Pre-Tax Subtotal : Rp {idr(preTax)}</div>
-                  <div>PPN Tax ({value(taxPct, "%")})   : Rp {idr(taxAmt)}</div>
-                  <div className="text-emerald-400 font-bold border-t border-slate-700 pt-1">
-                    Expected Total   : Rp {idr(expTotal)} | Billed: Rp {idr(billTotal)}
+                  <div className="font-bold text-teal">--- INTEGER IDR MATHEMATICAL AUDIT TRACE ---</div>
+                  <div>Base rate tariff : {money(baseRate)} ({tier})</div>
+                  <div>Weight used scale: {value(weight, " kg")} → Base: {money(baseAmt)}</div>
+                  <div>Fuel surcharge   : {value(fuelPct, "%")} → {money(fuelAmt)}</div>
+                  <div>Pre-tax subtotal : {money(preTax)}</div>
+                  <div>VAT (PPN, {value(taxPct, "%")}) : {money(taxAmt)}</div>
+                  <div className="border-t border-navy-muted/30 pt-1 font-bold text-teal">
+                    Expected total   : {money(expTotal)} | Billed: {money(billTotal)}
                   </div>
                 </>
               );
@@ -351,31 +329,31 @@ export function ReconciliationCard({
         )}
       </div>
 
-      {/* Human-in-the-Loop Decision Buttons */}
-      <CardFooter className="p-3 border-t border-slate-200 bg-white flex items-center justify-between gap-3">
-        <div className="text-[11px] text-slate-600 font-medium">
-          Authorizer Role: <strong className="text-slate-900">Mengikuti sesi pengguna</strong>
+      {/* Human-in-the-loop decision buttons */}
+      <CardFooter className="flex items-center justify-between gap-3 border-t border-hairline bg-card p-3">
+        <div className="text-[12px] font-medium text-body">
+          Authorizer role: <strong className="font-semibold text-ink">taken from the signed-in session</strong>
         </div>
 
         <div className="flex items-center gap-2">
           <Button
-            size="sm"
+            type="button"
             onClick={() => onOpenDecisionModal("REJECT")}
-            className="bg-slate-800 text-white hover:bg-slate-900 font-bold text-xs h-8 px-3"
+            className="h-8 bg-navy-deep px-3 text-[12px] font-semibold text-white hover:bg-navy"
           >
             Reject
           </Button>
           <Button
-            size="sm"
+            type="button"
             onClick={() => onOpenDecisionModal("DISPUTE")}
-            className="bg-rose-600 text-white hover:bg-rose-700 font-bold text-xs h-8 px-3.5"
+            className="h-8 bg-error-ink px-3.5 text-[12px] font-semibold text-white hover:opacity-90"
           >
             Dispute Overcharge
           </Button>
           <Button
-            size="sm"
+            type="button"
             onClick={() => onOpenDecisionModal("APPROVE")}
-            className="bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-xs h-8 px-4"
+            className="h-8 bg-teal-ink px-4 text-[12px] font-semibold text-white hover:opacity-90"
           >
             Approve Payment
           </Button>
