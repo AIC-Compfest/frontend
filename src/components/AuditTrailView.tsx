@@ -26,7 +26,7 @@ export function AuditTrailView({ auditTrail }: AuditTrailViewProps) {
   return (
     <Card className="rounded-card border border-hairline bg-card text-ink shadow-none">
       <CardHeader className="flex flex-row items-center justify-between border-b border-hairline p-4 pb-3">
-        <CardTitle className="flex items-center gap-2 font-display text-[16px] font-normal tracking-normal text-ink">
+        <CardTitle className="flex items-center gap-2 font-sans text-[16px] font-semibold tracking-normal text-ink">
           <ShieldCheck className="h-4 w-4 text-navy" strokeWidth={1.75} aria-hidden="true" />
           <span>Audit Ledger Trail ({auditTrail.length})</span>
         </CardTitle>

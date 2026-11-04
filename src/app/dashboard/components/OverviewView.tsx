@@ -128,7 +128,7 @@ export function OverviewView({
           aria-hidden="true"
           className="pointer-events-none absolute -bottom-24 right-44 -z-10 h-56 w-56 rounded-[58%_42%_35%_65%/52%_38%_62%_48%] bg-[linear-gradient(120deg,var(--color-teal),var(--color-action))] opacity-[.1] blur-2xl"
         />
-        <h1 className={pageTitle}>Overview</h1>
+        <h1 className={pageTitle}>Welcome back to Verflo!</h1>
         <p className="mt-2 max-w-2xl text-[14px] leading-6 text-body">
           Logistics spend reconciliation and audit engine powered by automated 4-way matching.
         </p>

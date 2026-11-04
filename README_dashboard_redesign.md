@@ -6,7 +6,7 @@ Not changed: the landing, login, register, and home pages (except the shared fon
 
 ## Summary
 
-- The shell, sidebar, overview, and list views use the brand tokens, Boldonse headings, and Figtree text. Dashboard copy is English.
+- The shell, sidebar, overview, and list views use the brand tokens, with Figtree for headings and text. Dashboard copy is English.
 - The sidebar is rebuilt: navy rail, concave active tab, collapse toggle with a saved state, Ctrl/Cmd+B, tooltips, and a mobile drawer with a focus trap.
 - Overview filler is gone. The overview has a new header, four stat tiles, and two cards.
 - Dead modals, `ContractsView`, and an unused fixture are deleted. The live batch modal is renamed to `BatchHitlReviewModal.tsx`.
@@ -49,7 +49,7 @@ Typecheck, tests, and the production build pass. Lint has 0 errors and 13 warnin
 - `src/components/ReviewQueue.tsx`: four KPI tiles with compact IDR, a labeled filter bar, and folder rows with a "View Details" button. The compact unit for billions is now "B". The old "M" meant miliar (billion), which an English reader would take for millions.
 - `ExceptionView.tsx` (Anomaly Archive): three summary tiles, status chips, and rows with "View Evidence". Removed the unused `statusTabs` array.
 - `UploadDropzone.tsx` (Document Hub): the filename heuristics are unchanged. The "Choose Files" button is now a focusable button. The old one had `pointer-events-none`, so it could not be used with a keyboard. Saved documents show en-US dates. The import points at `BatchHitlReviewModal`.
-- `MitraLogistikView.tsx` (Logistics Partners): three KPI tiles and partner cards with status chips and the PKS details. Partner names use Figtree, because they are data and not headings.
+- `MitraLogistikView.tsx` (Logistics Partners): three KPI tiles and partner cards with status chips and the PKS details. Partner names use Figtree, because they are data.
 - `DisputeListView.tsx` (Dispute Packages): total claimable in the header and "Inspect Memo" rows. The loading text said `status=EXCEPTION`, but the request fetches `DISPUTED`. It now reads "Loading disputed cases...".
 - `GlobalAuditLedgerView.tsx` (Audit Ledger Trail): a segmented action filter and a timeline with action-colored dots. Removed the "PostgreSQL audit_events" badge, which does not come from the response. The header shows the entry count.
 - `FinalApprovalView.tsx`: sub-tabs, KPI tiles, and tables. The route column now reads the `origin` and `destination` fields. Before, every row showed a hard-coded "JKT → SBY" and "TRUCKING_FTL". Release buttons are navy instead of emerald, so white text meets AA. The release dialog has `role="dialog"`. The sign-off request body is unchanged.
@@ -154,10 +154,10 @@ Focus: dashboard controls share one focus class, a 2px action ring with a 2px ca
 
 ## Open items
 
-1. **Boldonse scope.** Boldonse is used for every heading: page titles (22px on phones, 28px on desktop), card and section titles (18px), and modal titles (16px). Table data, partner names, invoice numbers, KPI numbers, and buttons use Figtree. No heading mixes the two fonts. Tell me if you want only page titles in Boldonse.
+1. **Heading font (resolved).** Dashboard headings and titles use Figtree. Page titles use weight 700, and panel, card, and modal titles use weight 600. Boldonse now appears only on the landing page and on the login and register headings.
 2. **Indonesian audit reasons in requests.** `BatchHitlReviewModal` still sends two Indonesian `reason` strings with each acceptance or correction: "Disetujui auditor pada audit batch HITL" and "Koreksi auditor pada audit batch HITL". The brief bars request-body changes, so I left them. They appear in the Audit Ledger Trail. Changing them only affects new audit records, so confirm before I switch them to English.
 3. **Shared primitives keep their palette.** `components/ui/*` (button, card, badge, input, label, separator) still uses slate, rose, emerald, and hex defaults. Landing, login, and register depend on those defaults. The dashboard overrides them through `dashboard-ui.ts`. Moving the primitives to tokens would change those pages, so I left that as a separate decision.
-4. **Landing headlines change.** Loading Boldonse means `font-display` headings on the landing page now render in Boldonse. They used to fall back to Impact, because the font never loaded. This follows DESIGN.md, but please look at the landing page.
+4. **Landing headline styling.** Landing headings now use line height 1.04 to 1.1 and letter spacing 0. The old values were 0.92 to 0.98 and -0.025em, which made Boldonse look cramped. Below 640px, the hero is 36.7px at 390px wide (was 44.8px), and section headings are 44px (was 48px). The hero also has 32px more top padding on phones, so the fixed navbar no longer covers its first line. DESIGN.md lists line heights of 1.02 to 1.08 and letter spacing of -0.2px to -0.5px, so these values are slightly looser than the table. Login and register headings keep their original spacing.
 5. **Protected files with Indonesian text.** `src/lib/review.ts` returns an Indonesian fallback ("Tidak ada kandidat … isi koreksi") that includes an em dash. The modal never renders it, since it shows its own English text, but the string stays in the file. `src/lib/auth.ts` throws "Gagal melakukan registrasi.", "Sesi telah berakhir. Silakan login kembali.", and login uses "Email atau password salah.". Only the login and register flows reach those messages. The dashboard imports just `getStoredUser` from that file.
 6. **Claims I kept without checking.** Settings says "Policy changes take effect immediately across all active workers." The dispute package footer says the package is "compliant with Master Service Agreement terms." Neither claim comes from the data, and this repo cannot confirm them. Confirm them or tell me to remove them.
 7. **The overview title appears twice.** The header shows "Overview", and the overview block shows it again, as the brief asked. Dropping the header title on that one tab is a small change if you prefer.
@@ -197,6 +197,6 @@ Static audits over `src/app/dashboard` and the rendered components:
 - No `console.log` in `src`.
 - No commented-out code in the dashboard or deferred components. Commented-out JSX remains only in landing components, which are out of scope.
 - No em dashes or en dashes in the files I wrote.
-- No Boldonse heading below 16px.
+- No Boldonse in the dashboard. Boldonse stays on the landing headings and the login and register headings.
 
 Line endings: the 26 files I wrote or changed use CRLF, to match the repo. Git's autocrlf warnings are gone.

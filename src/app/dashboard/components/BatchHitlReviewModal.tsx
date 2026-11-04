@@ -242,7 +242,7 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-hairline px-6 py-4">
           <div>
-            <h2 id="batch-review-title" className="flex items-center gap-2 font-display text-[16px] font-normal text-ink">
+            <h2 id="batch-review-title" className="flex items-center gap-2 font-sans text-[16px] font-semibold text-ink">
               <ShieldCheck className="h-5 w-5 text-navy" strokeWidth={1.75} aria-hidden="true" />
               Document mapping audit
             </h2>

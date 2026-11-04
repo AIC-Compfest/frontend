@@ -80,7 +80,7 @@ export function DisputePackageModal({
               <FileCheck2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
             </div>
             <div>
-              <CardTitle className="font-display text-[16px] font-normal tracking-normal text-navy">
+              <CardTitle className="font-sans text-[16px] font-semibold tracking-normal text-navy">
                 Official 3PL billing dispute claim package
               </CardTitle>
               <CardDescription className="mt-0.5 text-[12px] text-body">

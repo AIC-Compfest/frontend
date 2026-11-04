@@ -10,7 +10,7 @@ export const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
 
 export const pageTitle =
-  "font-display text-[22px] font-normal leading-tight tracking-normal text-ink md:text-[28px]";
+  "font-sans text-[22px] font-bold leading-tight tracking-normal text-ink md:text-[28px]";
 
 export const panel = "rounded-card border border-hairline bg-card text-ink shadow-none";
 
@@ -18,7 +18,7 @@ export const panelHeader =
   "flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-4";
 
 export const panelTitle =
-  "font-display text-[18px] font-normal leading-snug tracking-normal text-ink";
+  "font-sans text-[18px] font-semibold leading-snug tracking-normal text-ink";
 
 export const label = "text-[12px] font-semibold uppercase tracking-[.08em] text-muted";
 

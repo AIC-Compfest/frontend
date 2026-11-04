@@ -63,7 +63,7 @@ export default function LoginPage() {
         <div className="w-full max-w-5xl grid lg:grid-cols-[1fr_420px] gap-10 items-center">
           <div className="hidden lg:block px-8">
             <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#0077CC]">Reviewer workspace</span>
-            <h1 className="font-display text-5xl leading-[1.05] text-[#12203A] mt-5">Make every charge easier to trust.</h1>
+            <h1 className="font-display text-4xl leading-[1.5] text-[#12203A] mt-5">Make every charge easier to trust.</h1>
             <p className="text-base leading-relaxed text-[#55637A] max-w-md mt-6">Bring invoice review, shipment evidence, and contract logic into one calm workspace for your team.</p>
             <div className="grid grid-cols-3 gap-3 max-w-md mt-10">
               <div className="rounded-2xl bg-white border border-[#CDDBE8] p-4"><strong className="block text-xl text-[#243A5E]">01</strong><span className="text-xs text-[#7C879C]">Upload evidence</span></div>

@@ -26,7 +26,7 @@ export function BenchmarkMetrics() {
             <p className="text-sm font-semibold tracking-[.16em] text-[#8FD7D4]">
               PROOF OVER PROMISES
             </p>
-            <h2 className="mt-7 font-display text-5xl leading-[.98] tracking-tight md:text-7xl">
+            <h2 className="mt-7 font-display text-[2.75rem] sm:text-5xl leading-[1.08] tracking-normal md:text-7xl">
               The safety case is visible.
             </h2>
             <p className="mt-8 max-w-sm text-base leading-7 text-[#DCE8F5]">
@@ -65,7 +65,7 @@ export function BenchmarkMetrics() {
                   </span>
                   {/* <ArrowUpRight className="h-4 w-4 text-white/45 transition-transform group-hover:-translate-y-1 group-hover:translate-x-1" /> */}
                 </div>
-                <strong className="mt-12 block font-display text-4xl tracking-tight">
+                <strong className="mt-12 block font-display text-4xl tracking-normal">
                   {value}
                 </strong>
                 <p className="mt-3 text-sm leading-6 text-[#DCE8F5]">{label}</p>
