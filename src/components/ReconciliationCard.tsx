@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ShipmentEvent } from "@/types/reconciliation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DocumentProfile, getDocumentProfile } from "@/lib/api";
 import {
   Calculator,
   AlertTriangle,
@@ -37,11 +38,54 @@ const STATUS_CHIP: Record<string, { tone: ChipTone; text: string }> = {
 export function ReconciliationCard({
   event,
   activeDocumentType = "INVOICE",
+  activeDocumentId,
   onViewProof,
   onOpenDecisionModal,
   onOpenDisputePackage,
 }: ReconciliationCardProps) {
   const [showTrace, setShowTrace] = useState(true);
+  const [documentProfile, setDocumentProfile] = useState<DocumentProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  // Fetch document profile when activeDocumentId changes
+  useEffect(() => {
+    if (!activeDocumentId) {
+      setDocumentProfile(null);
+      return;
+    }
+
+    let mounted = true;
+    setLoadingProfile(true);
+
+    getDocumentProfile(activeDocumentId)
+      .then((profile) => {
+        if (mounted) {
+          setDocumentProfile(profile);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch document profile:", err);
+        if (mounted) {
+          setDocumentProfile(null);
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoadingProfile(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [activeDocumentId]);
+
+  // Helper function to get predicted value from document profile
+  const getPredictedValue = (fieldName: string): unknown => {
+    if (!documentProfile) return null;
+    const prediction = documentProfile.predictions.find((p) => p.field_name === fieldName);
+    return prediction?.predicted_value ?? null;
+  };
 
   const billed = event?.invoice?.billed_amount || 0;
   const expected = event?.pricing?.expected_total_charge || 0;
@@ -119,22 +163,36 @@ export function ReconciliationCard({
                 <div className="space-y-2">
                   <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Invoice</div>
                   <div className="space-y-1.5">
-                    {event?.invoice?.invoice_number && (
+                    {(documentProfile
+                      ? getPredictedValue("invoice_number")
+                      : event?.invoice?.invoice_number) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Invoice #:</span>
-                        <span className="font-semibold tabular-nums text-ink">{event.invoice.invoice_number}</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("invoice_number") : event?.invoice?.invoice_number)}
+                        </span>
                       </div>
                     )}
-                    {event?.invoice?.invoice_date && (
+                    {(documentProfile
+                      ? getPredictedValue("invoice_date")
+                      : event?.invoice?.invoice_date) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Date:</span>
-                        <span className="font-semibold tabular-nums text-ink">{event.invoice.invoice_date}</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("invoice_date") : event?.invoice?.invoice_date)}
+                        </span>
                       </div>
                     )}
-                    {event?.invoice?.billed_amount && (
+                    {(documentProfile
+                      ? getPredictedValue("billed_amount")
+                      : event?.invoice?.billed_amount) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Billed:</span>
-                        <span className="font-semibold tabular-nums text-ink">{formatIDR(event.invoice.billed_amount)}</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {formatIDR(
+                            Number(documentProfile ? getPredictedValue("billed_amount") : event?.invoice?.billed_amount) || 0
+                          )}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -144,16 +202,24 @@ export function ReconciliationCard({
                 <div className="space-y-2">
                   <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Vendor</div>
                   <div className="space-y-1.5">
-                    {event?.vendor_id && (
+                    {(documentProfile
+                      ? getPredictedValue("vendor_id")
+                      : event?.vendor_id) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">ID:</span>
-                        <span className="truncate font-semibold tabular-nums text-ink">{event.vendor_id}</span>
+                        <span className="truncate font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("vendor_id") : event?.vendor_id)}
+                        </span>
                       </div>
                     )}
-                    {event?.invoice?.vendor_name && (
+                    {(documentProfile
+                      ? getPredictedValue("vendor_name")
+                      : event?.invoice?.vendor_name) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Name:</span>
-                        <span className="truncate font-semibold text-ink">{event.invoice.vendor_name}</span>
+                        <span className="truncate font-semibold text-ink">
+                          {String(documentProfile ? getPredictedValue("vendor_name") : event?.invoice?.vendor_name)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -167,22 +233,34 @@ export function ReconciliationCard({
                 <div className="space-y-2">
                   <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Shipment</div>
                   <div className="space-y-1.5">
-                    {event?.shipment?.surat_jalan_number && (
+                    {(documentProfile
+                      ? getPredictedValue("surat_jalan_number")
+                      : event?.shipment?.surat_jalan_number) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">SJ #:</span>
-                        <span className="font-semibold tabular-nums text-ink">{event.shipment.surat_jalan_number}</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("surat_jalan_number") : event?.shipment?.surat_jalan_number)}
+                        </span>
                       </div>
                     )}
-                    {event?.shipment?.shipment_date && (
+                    {(documentProfile
+                      ? getPredictedValue("shipment_date")
+                      : event?.shipment?.shipment_date) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Date:</span>
-                        <span className="font-semibold tabular-nums text-ink">{event.shipment.shipment_date}</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("shipment_date") : event?.shipment?.shipment_date)}
+                        </span>
                       </div>
                     )}
-                    {event?.shipment?.shipment_id && (
+                    {(documentProfile
+                      ? getPredictedValue("shipment_id")
+                      : event?.shipment?.shipment_id) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">ID:</span>
-                        <span className="truncate font-semibold tabular-nums text-ink">{event.shipment.shipment_id}</span>
+                        <span className="truncate font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("shipment_id") : event?.shipment?.shipment_id)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -192,22 +270,35 @@ export function ReconciliationCard({
                 <div className="space-y-2">
                   <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Logistics</div>
                   <div className="space-y-1.5">
-                    {event?.shipment?.origin && event?.shipment?.destination && (
+                    {((documentProfile
+                      ? getPredictedValue("origin") && getPredictedValue("destination")
+                      : event?.shipment?.origin && event?.shipment?.destination)) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Route:</span>
-                        <span className="text-right font-semibold text-ink">{event.shipment.origin} → {event.shipment.destination}</span>
+                        <span className="text-right font-semibold text-ink">
+                          {String(documentProfile ? getPredictedValue("origin") : event?.shipment?.origin)} →{" "}
+                          {String(documentProfile ? getPredictedValue("destination") : event?.shipment?.destination)}
+                        </span>
                       </div>
                     )}
-                    {event?.shipment?.weight_actual_kg && (
+                    {(documentProfile
+                      ? getPredictedValue("weight_actual_kg")
+                      : event?.shipment?.weight_actual_kg) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Weight:</span>
-                        <span className="font-semibold tabular-nums text-ink">{event.shipment.weight_actual_kg} kg</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("weight_actual_kg") : event?.shipment?.weight_actual_kg)} kg
+                        </span>
                       </div>
                     )}
-                    {event?.shipment?.total_packages && (
+                    {(documentProfile
+                      ? getPredictedValue("total_packages")
+                      : event?.shipment?.total_packages) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Packages:</span>
-                        <span className="font-semibold tabular-nums text-ink">{event.shipment.total_packages}</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("total_packages") : event?.shipment?.total_packages)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -221,22 +312,34 @@ export function ReconciliationCard({
                 <div className="space-y-2">
                   <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Delivery</div>
                   <div className="space-y-1.5">
-                    {event?.pod?.pod_number && (
+                    {(documentProfile
+                      ? getPredictedValue("pod_number")
+                      : event?.pod?.pod_number) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">POD #:</span>
-                        <span className="font-semibold tabular-nums text-ink">{event.pod.pod_number}</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("pod_number") : event?.pod?.pod_number)}
+                        </span>
                       </div>
                     )}
-                    {event?.pod?.delivery_date && (
+                    {(documentProfile
+                      ? getPredictedValue("delivery_date")
+                      : event?.pod?.delivery_date) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Date:</span>
-                        <span className="font-semibold tabular-nums text-ink">{event.pod.delivery_date}</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {String(documentProfile ? getPredictedValue("delivery_date") : event?.pod?.delivery_date)}
+                        </span>
                       </div>
                     )}
-                    {event?.pod?.receiver_name && (
+                    {(documentProfile
+                      ? getPredictedValue("receiver_name")
+                      : event?.pod?.receiver_name) && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Receiver:</span>
-                        <span className="truncate font-semibold text-ink">{event.pod.receiver_name}</span>
+                        <span className="truncate font-semibold text-ink">
+                          {String(documentProfile ? getPredictedValue("receiver_name") : event?.pod?.receiver_name)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -248,21 +351,48 @@ export function ReconciliationCard({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-body">Signature:</span>
-                      <span className={cn("font-semibold", event?.pod?.signature_present ? "text-teal-ink" : "text-error-ink")}>
-                        {event?.pod?.signature_present ? "Present" : "Missing"}
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          (documentProfile ? getPredictedValue("signature_present") : event?.pod?.signature_present)
+                            ? "text-teal-ink"
+                            : "text-error-ink"
+                        )}
+                      >
+                        {(documentProfile ? getPredictedValue("signature_present") : event?.pod?.signature_present)
+                          ? "Present"
+                          : "Missing"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-body">Stamp:</span>
-                      <span className={cn("font-semibold", event?.pod?.stamp_present ? "text-teal-ink" : "text-error-ink")}>
-                        {event?.pod?.stamp_present ? "Present" : "Missing"}
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          (documentProfile ? getPredictedValue("stamp_present") : event?.pod?.stamp_present)
+                            ? "text-teal-ink"
+                            : "text-error-ink"
+                        )}
+                      >
+                        {(documentProfile ? getPredictedValue("stamp_present") : event?.pod?.stamp_present)
+                          ? "Present"
+                          : "Missing"}
                       </span>
                     </div>
-                    {event?.pod?.signature_confidence !== undefined && (
+                    {(documentProfile
+                      ? getPredictedValue("signature_confidence")
+                      : event?.pod?.signature_confidence) !== undefined && (
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-body">Confidence:</span>
                         <span className="font-semibold tabular-nums text-ink">
-                          {(event.pod.signature_confidence * 100).toFixed(1)}%
+                          {(
+                            (Number(
+                              documentProfile
+                                ? getPredictedValue("signature_confidence")
+                                : event?.pod?.signature_confidence
+                            ) || 0) * 100
+                          ).toFixed(1)}
+                          %
                         </span>
                       </div>
                     )}

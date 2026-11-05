@@ -285,6 +285,7 @@ function DashboardContent() {
                       <ReconciliationCard
                         event={currentEvent}
                         activeDocumentType={activeDocumentType}
+                        activeDocumentId={activeDocTab}
                         onViewProof={handleViewProof}
                         onOpenDecisionModal={(action) => setDecisionModalAction(action)}
                         onOpenDisputePackage={() => setIsDisputePackageOpen(true)}
