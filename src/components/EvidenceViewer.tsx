@@ -44,6 +44,7 @@ interface EvidenceViewerProps {
   activeDocumentTab: DocTab;
   onTabChange: (tab: DocTab) => void;
   onSelectField: (fieldName: string | null) => void;
+  onDocumentTypeChange?: (docType: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT") => void;
 }
 
 interface EvidenceRow {
@@ -155,6 +156,7 @@ export function EvidenceViewer({
   activeDocumentTab,
   onTabChange,
   onSelectField,
+  onDocumentTypeChange,
 }: EvidenceViewerProps) {
   const [zoom, setZoom] = useState(100);
   const [page, setPage] = useState(1);
@@ -370,6 +372,16 @@ export function EvidenceViewer({
     setPage(it.page);
     onSelectField(it.canonical);
   };
+
+  // Notify parent when active tab (document type) changes
+  useEffect(() => {
+    if (documentId && documentTabs.length > 0) {
+      const activeTab = documentTabs.find((t) => t.id === documentId);
+      if (activeTab && onDocumentTypeChange) {
+        onDocumentTypeChange(activeTab.type);
+      }
+    }
+  }, [documentId, documentTabs, onDocumentTypeChange]);
 
   const lastPage = Math.max(pageCount, 1);
 

@@ -70,6 +70,7 @@ function DashboardContent() {
   // Evidence viewer controls. activeDocTab holds a document ID (UUID).
   const [activeDocTab, setActiveDocTab] = useState<string>("");
   const [selectedField, setSelectedField] = useState<string | null>(null);
+  const [activeDocumentType, setActiveDocumentType] = useState<"INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT">("INVOICE");
 
   // Modal state
   const [decisionModalAction, setDecisionModalAction] = useState<"APPROVE" | "DISPUTE" | "REJECT" | null>(null);
@@ -276,12 +277,14 @@ function DashboardContent() {
                         activeDocumentTab={activeDocTab}
                         onTabChange={setActiveDocTab}
                         onSelectField={setSelectedField}
+                        onDocumentTypeChange={setActiveDocumentType}
                       />
                     </div>
 
                     <div className="h-[680px] lg:col-span-6">
                       <ReconciliationCard
                         event={currentEvent}
+                        activeDocumentType={activeDocumentType}
                         onViewProof={handleViewProof}
                         onOpenDecisionModal={(action) => setDecisionModalAction(action)}
                         onOpenDisputePackage={() => setIsDisputePackageOpen(true)}

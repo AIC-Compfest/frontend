@@ -20,6 +20,7 @@ import { chip, ChipTone, btnOutline, focusRing, label as labelClass } from "@/li
 
 interface ReconciliationCardProps {
   event: ShipmentEvent;
+  activeDocumentType?: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT";
   onViewProof: (fieldName: string, docTab: "INVOICE" | "SURAT_JALAN" | "POD" | "RATE_AGREEMENT") => void;
   onOpenDecisionModal: (action: "APPROVE" | "DISPUTE" | "REJECT") => void;
   onOpenDisputePackage: () => void;
@@ -35,6 +36,7 @@ const STATUS_CHIP: Record<string, { tone: ChipTone; text: string }> = {
 
 export function ReconciliationCard({
   event,
+  activeDocumentType = "INVOICE",
   onViewProof,
   onOpenDecisionModal,
   onOpenDisputePackage,
@@ -110,89 +112,255 @@ export function ReconciliationCard({
           </span>
 
           <div className="grid grid-cols-2 gap-3 rounded-control border border-hairline bg-canvas p-3 text-[12px]">
-            {/* Invoice */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Invoice</div>
-              <div className="space-y-1.5">
-                {event?.invoice?.invoice_number && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">Invoice #:</span>
-                    <span className="font-semibold tabular-nums text-ink">{event.invoice.invoice_number}</span>
+            {/* Show different content based on active document type */}
+            {activeDocumentType === "INVOICE" && (
+              <>
+                {/* Invoice */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Invoice</div>
+                  <div className="space-y-1.5">
+                    {event?.invoice?.invoice_number && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Invoice #:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.invoice.invoice_number}</span>
+                      </div>
+                    )}
+                    {event?.invoice?.invoice_date && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Date:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.invoice.invoice_date}</span>
+                      </div>
+                    )}
+                    {event?.invoice?.billed_amount && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Billed:</span>
+                        <span className="font-semibold tabular-nums text-ink">{formatIDR(event.invoice.billed_amount)}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {event?.invoice?.billed_amount && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">Billed:</span>
-                    <span className="font-semibold tabular-nums text-ink">{formatIDR(event.invoice.billed_amount)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Shipment */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Shipment</div>
-              <div className="space-y-1.5">
-                {event?.shipment?.shipment_id && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">ID:</span>
-                    <span className="truncate font-semibold tabular-nums text-ink">{event.shipment.shipment_id}</span>
+                {/* Vendor info */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Vendor</div>
+                  <div className="space-y-1.5">
+                    {event?.vendor_id && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">ID:</span>
+                        <span className="truncate font-semibold tabular-nums text-ink">{event.vendor_id}</span>
+                      </div>
+                    )}
+                    {event?.invoice?.vendor_name && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Name:</span>
+                        <span className="truncate font-semibold text-ink">{event.invoice.vendor_name}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {event?.shipment?.weight_actual_kg && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">Weight:</span>
-                    <span className="font-semibold tabular-nums text-ink">{event.shipment.weight_actual_kg} kg</span>
-                  </div>
-                )}
-                {event?.shipment?.origin && event?.shipment?.destination && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">Route:</span>
-                    <span className="text-right font-semibold text-ink">{event.shipment.origin} → {event.shipment.destination}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+                </div>
+              </>
+            )}
 
-            {/* Contract */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Contract</div>
-              <div className="space-y-1.5">
-                {event?.contract?.base_rate && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">Base rate:</span>
-                    <span className="font-semibold tabular-nums text-ink">{formatIDR(event.contract.base_rate)}</span>
+            {activeDocumentType === "SURAT_JALAN" && (
+              <>
+                {/* Shipment */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Shipment</div>
+                  <div className="space-y-1.5">
+                    {event?.shipment?.surat_jalan_number && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">SJ #:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.shipment.surat_jalan_number}</span>
+                      </div>
+                    )}
+                    {event?.shipment?.shipment_date && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Date:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.shipment.shipment_date}</span>
+                      </div>
+                    )}
+                    {event?.shipment?.shipment_id && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">ID:</span>
+                        <span className="truncate font-semibold tabular-nums text-ink">{event.shipment.shipment_id}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {event?.contract?.applicable_fuel_surcharge_percent !== undefined && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">Fuel surcharge:</span>
-                    <span className="font-semibold tabular-nums text-ink">{event.contract.applicable_fuel_surcharge_percent}%</span>
-                  </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Pricing */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Pricing</div>
-              <div className="space-y-1.5">
-                {event?.pricing?.expected_total_charge && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">Expected:</span>
-                    <span className="font-semibold tabular-nums text-ink">{formatIDR(event.pricing.expected_total_charge)}</span>
+                {/* Route & weight */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Logistics</div>
+                  <div className="space-y-1.5">
+                    {event?.shipment?.origin && event?.shipment?.destination && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Route:</span>
+                        <span className="text-right font-semibold text-ink">{event.shipment.origin} → {event.shipment.destination}</span>
+                      </div>
+                    )}
+                    {event?.shipment?.weight_actual_kg && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Weight:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.shipment.weight_actual_kg} kg</span>
+                      </div>
+                    )}
+                    {event?.shipment?.total_packages && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Packages:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.shipment.total_packages}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {event?.pricing?.difference_amount !== undefined && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-body">Diff:</span>
-                    <span className={cn("font-semibold tabular-nums", event.pricing.difference_amount >= 0 ? "text-error-ink" : "text-teal-ink")}>
-                      {event.pricing.difference_amount >= 0 ? "+" : ""}{formatIDR(event.pricing.difference_amount)}
-                    </span>
+                </div>
+              </>
+            )}
+
+            {activeDocumentType === "POD" && (
+              <>
+                {/* Proof of delivery */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Delivery</div>
+                  <div className="space-y-1.5">
+                    {event?.pod?.pod_number && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">POD #:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.pod.pod_number}</span>
+                      </div>
+                    )}
+                    {event?.pod?.delivery_date && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Date:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.pod.delivery_date}</span>
+                      </div>
+                    )}
+                    {event?.pod?.receiver_name && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Receiver:</span>
+                        <span className="truncate font-semibold text-ink">{event.pod.receiver_name}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+
+                {/* Proof details */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Proof</div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-body">Signature:</span>
+                      <span className={cn("font-semibold", event?.pod?.signature_present ? "text-teal-ink" : "text-error-ink")}>
+                        {event?.pod?.signature_present ? "Present" : "Missing"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-body">Stamp:</span>
+                      <span className={cn("font-semibold", event?.pod?.stamp_present ? "text-teal-ink" : "text-error-ink")}>
+                        {event?.pod?.stamp_present ? "Present" : "Missing"}
+                      </span>
+                    </div>
+                    {event?.pod?.signature_confidence !== undefined && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Confidence:</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {(event.pod.signature_confidence * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeDocumentType === "RATE_AGREEMENT" && (
+              <>
+                {/* Contract */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Contract</div>
+                  <div className="space-y-1.5">
+                    {event?.contract?.agreement_id && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">ID:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.contract.agreement_id}</span>
+                      </div>
+                    )}
+                    {event?.contract?.effective_from && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">From:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.contract.effective_from}</span>
+                      </div>
+                    )}
+                    {event?.contract?.effective_to && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">To:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.contract.effective_to}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Rates</div>
+                  <div className="space-y-1.5">
+                    {event?.contract?.base_rate && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Base rate:</span>
+                        <span className="font-semibold tabular-nums text-ink">{formatIDR(event.contract.base_rate)}</span>
+                      </div>
+                    )}
+                    {event?.contract?.applicable_fuel_surcharge_percent !== undefined && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Fuel surcharge:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.contract.applicable_fuel_surcharge_percent}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Always show pricing at the bottom */}
+            {activeDocumentType !== "RATE_AGREEMENT" && (
+              <>
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Contract</div>
+                  <div className="space-y-1.5">
+                    {event?.contract?.base_rate && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Base rate:</span>
+                        <span className="font-semibold tabular-nums text-ink">{formatIDR(event.contract.base_rate)}</span>
+                      </div>
+                    )}
+                    {event?.contract?.applicable_fuel_surcharge_percent !== undefined && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Fuel surcharge:</span>
+                        <span className="font-semibold tabular-nums text-ink">{event.contract.applicable_fuel_surcharge_percent}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[.08em] text-body">Pricing</div>
+                  <div className="space-y-1.5">
+                    {event?.pricing?.expected_total_charge && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Expected:</span>
+                        <span className="font-semibold tabular-nums text-ink">{formatIDR(event.pricing.expected_total_charge)}</span>
+                      </div>
+                    )}
+                    {event?.pricing?.difference_amount !== undefined && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body">Diff:</span>
+                        <span className={cn("font-semibold tabular-nums", event.pricing.difference_amount >= 0 ? "text-error-ink" : "text-teal-ink")}>
+                          {event.pricing.difference_amount >= 0 ? "+" : ""}{formatIDR(event.pricing.difference_amount)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
