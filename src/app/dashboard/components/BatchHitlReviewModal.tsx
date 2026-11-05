@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Circle, Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Circle, Loader2, ShieldCheck, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentProfile, finalizeDocumentBatch, getDocumentProfile, reprocessDocument, reviewDocumentField } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
@@ -11,6 +11,7 @@ import { TablePayloadView } from "./TablePayloadView";
 import { API_V1 } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import { btnOutline, btnPrimary, chip, focusRing, inputClass, textareaClass, th } from "@/lib/dashboard-ui";
+import { DocumentPageView, OverlayBox } from "@/components/evidence/DocumentPageView";
 
 interface Props {
   documentIds: string[];
@@ -45,6 +46,10 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
   const [finalizing, setFinalizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Record<string, string>>({});
+  const [zoom, setZoom] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [highlightedField, setHighlightedField] = useState<string | null>(null);
 
   // Load the first document to find the batch ID, then load and filter the whole batch.
   // This keeps documents from other batches out of the modal.
@@ -101,6 +106,30 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
   const documentsInCurrentBatch = profiles;
 
   const active = documentsInCurrentBatch.find((p) => p.document.id === activeDocId);
+
+  // Create overlay boxes from evidence data
+  const overlayBoxes: OverlayBox[] = useMemo(() => {
+    if (!active) return [];
+    
+    const boxes: OverlayBox[] = [];
+    for (const ev of active.evidence) {
+      if (ev.bbox_x1 == null || ev.bbox_y1 == null || ev.bbox_x2 == null || ev.bbox_y2 == null) continue;
+      
+      const isHighlighted = highlightedField === ev.field_name;
+      boxes.push({
+        id: ev.id,
+        page: ev.page_number,
+        x1: ev.bbox_x1,
+        y1: ev.bbox_y1,
+        x2: ev.bbox_x2,
+        y2: ev.bbox_y2,
+        tone: isHighlighted ? "selected" : "default",
+        title: `${ev.field_name}: ${ev.field_value}`,
+      });
+    }
+    
+    return boxes;
+  }, [active, highlightedField]);
 
   const pending = (profile: DocumentProfile) => profile.predictions.filter(
     (prediction) => decisionFor(profile, prediction.id)?.decision_status === "PENDING_REVIEW" && visiblePredictions(profile).some((item) => item.id === prediction.id)
@@ -295,13 +324,89 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
             {/* Main content: document (left) and field table (right) */}
             {active && (
               <div className="flex min-h-0 flex-1 overflow-hidden">
-                {/* Left: original document */}
-                <div className="w-5/12 overflow-y-auto border-r border-hairline bg-surface-soft p-4">
-                  <div className="h-full overflow-hidden rounded-control border border-hairline bg-card">
-                    <iframe
-                      src={`${API_V1}/documents/${active.document.id}/download`}
-                      className="h-full w-full"
-                      title={`Document: ${active.document.filename}`}
+                {/* Left: original document with bounding boxes */}
+                <div className="w-5/12 flex flex-col border-r border-hairline bg-surface-soft">
+                  {/* Zoom and page controls */}
+                  <div className="flex items-center justify-between gap-2 border-b border-hairline bg-card px-3 py-2">
+                    <div className="flex items-center gap-1 rounded-control border border-hairline bg-card px-1.5 py-0.5">
+                      <button
+                        type="button"
+                        aria-label="Previous page"
+                        disabled={currentPage <= 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        className={cn(
+                          "grid h-6 w-6 place-items-center rounded-pop text-body transition-colors hover:bg-surface-soft hover:text-ink disabled:pointer-events-none disabled:opacity-40",
+                          focusRing
+                        )}
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                      </button>
+                      <span className="w-14 text-center text-[11px] font-semibold tabular-nums text-ink">
+                        {currentPage}/{pageCount}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Next page"
+                        disabled={currentPage >= pageCount}
+                        onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
+                        className={cn(
+                          "grid h-6 w-6 place-items-center rounded-pop text-body transition-colors hover:bg-surface-soft hover:text-ink disabled:pointer-events-none disabled:opacity-40",
+                          focusRing
+                        )}
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 rounded-control border border-hairline bg-card px-1.5 py-0.5">
+                      <button
+                        type="button"
+                        aria-label="Zoom out"
+                        onClick={() => setZoom((z) => Math.max(z - 15, 60))}
+                        className={cn(
+                          "grid h-6 w-6 place-items-center rounded-pop text-body transition-colors hover:bg-surface-soft hover:text-ink",
+                          focusRing
+                        )}
+                      >
+                        <ZoomOut className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                      </button>
+                      <span className="w-10 text-center text-[11px] font-semibold tabular-nums text-ink">{zoom}%</span>
+                      <button
+                        type="button"
+                        aria-label="Zoom in"
+                        onClick={() => setZoom((z) => Math.min(z + 15, 240))}
+                        className={cn(
+                          "grid h-6 w-6 place-items-center rounded-pop text-body transition-colors hover:bg-surface-soft hover:text-ink",
+                          focusRing
+                        )}
+                      >
+                        <ZoomIn className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setZoom(100)}
+                        className={cn("h-6 rounded-pop px-1.5 text-[11px] font-semibold text-body hover:bg-surface-soft hover:text-ink", focusRing)}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Document viewer with bbox overlays */}
+                  <div className="flex-1 overflow-hidden">
+                    <DocumentPageView
+                      fileUrl={`${API_V1}/documents/${active.document.id}/download`}
+                      page={currentPage}
+                      zoom={zoom}
+                      boxes={overlayBoxes}
+                      onPageCount={setPageCount}
+                      onBoxClick={(id) => {
+                        const evidence = active.evidence.find((ev) => ev.id === id);
+                        if (evidence) {
+                          setHighlightedField(evidence.field_name);
+                          setCurrentPage(evidence.page_number);
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -373,7 +478,21 @@ export function BatchHitlReviewModal({ documentIds, onClose, onFinalized }: Prop
                               : prediction.predicted_raw_text;
 
                             return (
-                              <tr key={prediction.id} className="border-b border-hairline align-top last:border-b-0 hover:bg-surface-soft">
+                              <tr 
+                                key={prediction.id} 
+                                className={cn(
+                                  "border-b border-hairline align-top last:border-b-0 hover:bg-surface-soft cursor-pointer transition-colors",
+                                  highlightedField === prediction.field_name && "bg-action/10"
+                                )}
+                                onClick={() => {
+                                  setHighlightedField(prediction.field_name);
+                                  // Find the evidence for this field and jump to its page
+                                  const evidence = active.evidence.find((ev) => ev.field_name === prediction.field_name);
+                                  if (evidence) {
+                                    setCurrentPage(evidence.page_number);
+                                  }
+                                }}
+                              >
                                 <td className="px-4 py-3 font-semibold text-ink">{prediction.field_name}</td>
 
                                 <td className="px-4 py-3 text-ink">
