@@ -14,11 +14,10 @@ import {
   ChipTone,
   emptyState,
   inputClass,
-  kpiValue,
-  label,
   panel,
   selectClass,
 } from "@/lib/dashboard-ui";
+import { StatCard } from "@/components/stats/StatCard";
 
 interface ExceptionViewProps {
   onSelectTransaction: (eventId: string) => void;
@@ -27,6 +26,13 @@ interface ExceptionViewProps {
 const API_BASE = API_V1;
 
 const ALL_ANOMALY_STATUSES = "EXCEPTION,DUPLICATE,INSUFFICIENT_EVIDENCE,REJECTED";
+
+const STATUS_DOT_CLASS: Record<string, string> = {
+  EXCEPTION: "bg-error",
+  REJECTED: "bg-muted",
+  DUPLICATE: "bg-warning",
+  INSUFFICIENT_EVIDENCE: "bg-action",
+};
 
 const STATUS_TONES: Record<string, ChipTone> = {
   EXCEPTION: "error",
@@ -72,29 +78,41 @@ export function ExceptionView({ onSelectTransaction }: ExceptionViewProps) {
     <div className="space-y-6">
       {/* Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className={cn(panel, "space-y-3 p-5")}>
-          <span className={label}>Total anomaly documents</span>
-          <div className={kpiValue}>{items.length}</div>
-        </div>
-        <div className={cn(panel, "space-y-3 p-5")}>
-          <span className={label}>Total rejected variance</span>
-          <div className={kpiValue}>{formatIDR(totalVariance)}</div>
-        </div>
-        <div className={cn(panel, "space-y-3 p-5")}>
-          <span className={label}>Status distribution</span>
+        <StatCard
+          label="Total anomaly documents"
+          value={items.length}
+          caption="Across all anomaly statuses"
+          tone={items.length > 0 ? "warning" : "positive"}
+          art="alert"
+        />
+        <StatCard
+          label="Total rejected variance"
+          value={formatIDR(totalVariance)}
+          caption={totalVariance > 0 ? "Potential leakage" : "No variance recorded"}
+          tone={totalVariance > 0 ? "attention" : "positive"}
+          art="drop"
+        />
+        <StatCard label="Status distribution" tone="neutral">
           {distribution.length === 0 ? (
-            <p className="text-[13px] text-body">No documents</p>
+            <p className="mt-3 text-[13px]">No documents</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="mt-3 flex flex-wrap gap-2">
               {distribution.map((entry) => (
-                <li key={entry.status} className="flex items-center justify-between gap-3 text-[13px]">
-                  <span className={chip(STATUS_TONES[entry.status] ?? "neutral")}>{entry.status}</span>
-                  <span className="font-semibold tabular-nums text-ink">{entry.count}</span>
+                <li
+                  key={entry.status}
+                  className="inline-flex items-center gap-2 rounded-full bg-white py-1 pl-2.5 pr-3 text-[11px] font-semibold text-ink"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn("h-2 w-2 rounded-full", STATUS_DOT_CLASS[entry.status] ?? "bg-muted")}
+                  />
+                  <span>{entry.status}</span>
+                  <span className="tabular-nums text-body">{entry.count}</span>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </StatCard>
       </div>
 
       {/* Filters */}

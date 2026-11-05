@@ -11,12 +11,12 @@ import {
   chip,
   iconPlate,
   kpiValue,
-  label,
   pageTitle,
   panel,
   panelTitle,
 } from "@/lib/dashboard-ui";
-import { AlertTriangle, ArrowRight, CheckCircle2, Inbox, Loader2, Truck, Wallet, TrendingDown } from "lucide-react";
+import { StatCard } from "@/components/stats/StatCard";
+import { ArrowRight, Inbox, Loader2, Truck } from "lucide-react";
 
 interface OverviewViewProps {
   summary?: QueueSummary;
@@ -109,13 +109,6 @@ export function OverviewView({
   const cleanMatches = summary?.matches_count ?? (summary as any)?.clean_matches_count ?? 0;
   const totalInvoices = summary?.total_invoices_count ?? 0;
 
-  const stats = [
-    { label: "Total invoiced", value: formatIDR(totalInvoiced), icon: Wallet, tone: "neutral" as const },
-    { label: "Total variance", value: formatIDR(totalVariance), icon: TrendingDown, tone: "error" as const },
-    { label: "Open exceptions", value: String(openExceptions), icon: AlertTriangle, tone: "warning" as const },
-    { label: "Clean matches", value: String(cleanMatches), icon: CheckCircle2, tone: "success" as const },
-  ];
-
   return (
     <div className="space-y-6">
       <section className="relative isolate overflow-hidden rounded-card border border-hairline bg-card px-6 py-7 sm:px-8">
@@ -134,25 +127,36 @@ export function OverviewView({
         </p>
       </section>
 
-      {/* Stat tiles: 4 across on wide screens, 2 on tablets, 1 on mobile */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={stat.label}
-              className={cn(panel, "flex flex-col justify-between gap-6 p-5")}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span className={label}>{stat.label}</span>
-                <span className={iconPlate(stat.tone)}>
-                  <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
-                </span>
-              </div>
-              <span className="text-[24px] font-semibold leading-none tabular-nums text-ink">{stat.value}</span>
-            </div>
-          );
-        })}
+      {/* Stat cards: 2 across on wide screens, 2 on tablets, 1 on mobile */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-2">
+        <StatCard
+          label="Total invoiced"
+          value={formatIDR(totalInvoiced)}
+          caption={`Across ${totalInvoices} invoices`}
+          tone="neutral"
+          art="coins"
+        />
+        <StatCard
+          label="Total variance"
+          value={formatIDR(totalVariance)}
+          caption={totalVariance > 0 ? "Potential leakage" : "No variance recorded"}
+          tone={totalVariance > 0 ? "attention" : "positive"}
+          art="drop"
+        />
+        {/* <StatCard
+          label="Open exceptions"
+          value={String(openExceptions)}
+          caption={openExceptions > 0 ? "Waiting for review" : "Nothing waiting"}
+          tone={openExceptions > 0 ? "warning" : "positive"}
+          art="alert"
+        />
+        <StatCard
+          label="Clean matches"
+          value={String(cleanMatches)}
+          caption="Matched to contract"
+          tone="positive"
+          art="seal"
+        /> */}
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -174,14 +178,14 @@ export function OverviewView({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2 rounded-control border border-hairline bg-canvas p-4">
-                <span className={label}>Needs Review</span>
-                <div className={kpiValue}>{openExceptions}</div>
-              </div>
-              <div className="space-y-2 rounded-control border border-hairline bg-canvas p-4">
-                <span className={label}>Matches Contract</span>
-                <div className={kpiValue}>{cleanMatches}</div>
-              </div>
+              <StatCard
+                variant="compact"
+                label="Needs Review"
+                value={openExceptions}
+                tone={openExceptions > 0 ? "warning" : "positive"}
+                art="alert"
+              />
+              <StatCard variant="compact" label="Matches Contract" value={cleanMatches} tone="positive" art="seal" />
             </div>
           </div>
 

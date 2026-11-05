@@ -31,6 +31,20 @@
   --color-warning-ink: #8A5A14;
   --color-warning-soft: #FFF4DC;
 
+  /* Stat card tints. Each tone has a pale top and bottom, and a deep ink for labels on that tint. */
+  --color-stat-neutral-top: #F4F9FD;
+  --color-stat-neutral-bottom: #DCEAF7;
+  --color-stat-neutral-ink: #243A5E;
+  --color-stat-positive-top: #F1FBF6;
+  --color-stat-positive-bottom: #D2F0E2;
+  --color-stat-positive-ink: #0A5E47;
+  --color-stat-attention-top: #FFF5F7;
+  --color-stat-attention-bottom: #FBDCE3;
+  --color-stat-attention-ink: #8E1A31;
+  --color-stat-warning-top: #FFF8F2;
+  --color-stat-warning-bottom: #FBE1C9;
+  --color-stat-warning-ink: #7A2A05;
+
   --font-sans: var(--font-figtree), -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: var(--font-boldonse), -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
@@ -58,6 +72,45 @@ html { scroll-behavior: smooth; }
 /* Tabular numerals for financial precision */
 .font-tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Stat card surfaces. Each tone sets a pale tint with a hairline border. The white glow at top right
+ * lifts the corner where the illustration sits. Labels take the tone ink, and figures stay in ink.
+ */
+.stat-card {
+  --stat-top: var(--color-stat-neutral-top);
+  --stat-bottom: var(--color-stat-neutral-bottom);
+  --stat-ink: var(--color-stat-neutral-ink);
+  background-image:
+    radial-gradient(90% 80% at 100% 0%, color-mix(in oklab, var(--color-card) 85%, transparent), transparent 62%),
+    linear-gradient(160deg, var(--stat-top) 0%, var(--stat-bottom) 100%);
+  border: 1px solid color-mix(in oklab, var(--stat-ink) 12%, transparent);
+}
+
+.stat-card--positive {
+  --stat-top: var(--color-stat-positive-top);
+  --stat-bottom: var(--color-stat-positive-bottom);
+  --stat-ink: var(--color-stat-positive-ink);
+}
+
+.stat-card--attention {
+  --stat-top: var(--color-stat-attention-top);
+  --stat-bottom: var(--color-stat-attention-bottom);
+  --stat-ink: var(--color-stat-attention-ink);
+}
+
+.stat-card--warning {
+  --stat-top: var(--color-stat-warning-top);
+  --stat-bottom: var(--color-stat-warning-bottom);
+  --stat-ink: var(--color-stat-warning-ink);
+}
+
+/* Illustrations sit on the right edge and fade into the tint on their left, so they read as part of the card surface. */
+.stat-art {
+  opacity: 0.55;
+  mask-image: linear-gradient(to right, transparent 10%, black 75%);
+  -webkit-mask-image: linear-gradient(to right, transparent 10%, black 75%);
 }
 
 /* Subtle enterprise scrollbar */
