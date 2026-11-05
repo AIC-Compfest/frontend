@@ -36,8 +36,10 @@ import {
   Sparkles,
   Trash2,
   UploadCloud,
+  Eye,
 } from "lucide-react";
 import { BatchHitlReviewModal } from "./BatchHitlReviewModal";
+import { ExtractionResultModal } from "./ExtractionResultModal";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_SIZE_MB = 10;
@@ -103,6 +105,7 @@ export function UploadDropzone() {
   const ingestBatchIdRef = useRef(crypto.randomUUID());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [reviewDocumentIds, setReviewDocumentIds] = useState<string[] | null>(null);
+  const [extractionResultDocId, setExtractionResultDocId] = useState<string | null>(null);
 
   // Saved documents in the database
   const [savedDocs, setSavedDocs] = useState<SavedDocItem[]>([]);
@@ -452,6 +455,18 @@ export function UploadDropzone() {
 
                       {/* Document type and remove control */}
                       <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                        {item.status === "SUCCESS" && item.result?.document_id && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => setExtractionResultDocId(item.result!.document_id!)}
+                            className={cn(btnPrimary, "h-8 text-xs")}
+                          >
+                            <Eye className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                            View Extraction
+                          </Button>
+                        )}
+                        
                         {item.status === "READY" && (
                           <select
                             aria-label={`Document type for ${item.file.name}`}
@@ -648,6 +663,13 @@ export function UploadDropzone() {
             setReviewDocumentIds(null);
             window.location.assign(`/dashboard?event=${encodeURIComponent(eventId)}`);
           }}
+        />
+      )}
+
+      {extractionResultDocId && (
+        <ExtractionResultModal
+          documentId={extractionResultDocId}
+          onClose={() => setExtractionResultDocId(null)}
         />
       )}
     </div>
