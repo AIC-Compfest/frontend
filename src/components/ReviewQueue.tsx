@@ -12,11 +12,10 @@ import {
   emptyState,
   iconPlate,
   inputClass,
-  kpiValue,
-  label,
   panel,
   selectClass,
 } from "@/lib/dashboard-ui";
+import { StatCard } from "@/components/stats/StatCard";
 
 interface ReviewQueueProps {
   selectedEventId?: string | null;
@@ -119,13 +118,6 @@ export function ReviewQueue({ onSelectTransaction, onRefresh }: ReviewQueueProps
     });
   }, [items]);
 
-  const kpis = [
-    { label: "Total Invoiced Spend", value: formatCompactIDR(summary.total_invoiced_amount) },
-    { label: "Potential Leakage", value: `+${formatCompactIDR(summary.total_variance_amount)}` },
-    { label: "Anomaly Queue", value: `${summary.open_exceptions_count}` },
-    { label: "Clean Matches", value: `${summary.matches_count}` },
-  ];
-
   const selectFilter = (value: string, onChange: (value: string) => void, ariaLabel: string, children: React.ReactNode) => (
     <select aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} className={selectClass}>
       {children}
@@ -148,16 +140,36 @@ export function ReviewQueue({ onSelectTransaction, onRefresh }: ReviewQueueProps
 
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className={cn(panel, "space-y-3 p-5")}>
-            <span className={label}>{kpi.label}</span>
-            {isLoading ? (
-              <div className="h-7 w-32 animate-pulse rounded-control bg-surface-soft" />
-            ) : (
-              <div className={kpiValue}>{kpi.value}</div>
-            )}
-          </div>
-        ))}
+        <StatCard
+          label="Total Invoiced Spend"
+          value={formatCompactIDR(summary.total_invoiced_amount)}
+          tone="neutral"
+          art="coins"
+          loading={isLoading}
+        />
+        <StatCard
+          label="Potential Leakage"
+          value={`+${formatCompactIDR(summary.total_variance_amount)}`}
+          tone={summary.total_variance_amount > 0 ? "attention" : "positive"}
+          art="drop"
+          loading={isLoading}
+        />
+        <StatCard
+          label="Anomaly Queue"
+          value={String(summary.open_exceptions_count)}
+          caption={summary.open_exceptions_count > 0 ? "Open anomalies" : "Nothing open"}
+          tone={summary.open_exceptions_count > 0 ? "warning" : "positive"}
+          art="alert"
+          loading={isLoading}
+        />
+        <StatCard
+          label="Clean Matches"
+          value={String(summary.matches_count)}
+          caption="Matched to contract"
+          tone="positive"
+          art="seal"
+          loading={isLoading}
+        />
       </div>
 
       {/* Filters and folder list */}

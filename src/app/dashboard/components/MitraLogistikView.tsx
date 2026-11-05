@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { API_V1 } from "@/lib/config";
 import { cn } from "@/lib/utils";
-import { chip, iconPlate, kpiValue, label, panel, emptyState } from "@/lib/dashboard-ui";
+import { chip, iconPlate, label, panel, emptyState } from "@/lib/dashboard-ui";
+import { StatCard, type StatArtName, type StatTone } from "@/components/stats/StatCard";
 import { AlertCircle, Building2, Calendar, DollarSign, FileText, Loader2, Mail, Phone, Truck } from "lucide-react";
 import { getContracts, ContractItem } from "@/lib/api";
 
@@ -84,20 +85,38 @@ export function MitraLogistikView() {
 
   const activeMitras = mitras.filter((m) => m.is_active !== false);
 
-  const stats = [
-    { label: "Active logistics partners", value: activeMitras.length },
-    { label: "Rate agreements (PKS) linked", value: mitras.filter((m) => m.contract).length },
-    { label: "No rate agreement (PKS)", value: mitras.filter((m) => !m.contract).length },
+  const withoutAgreement = mitras.filter((m) => !m.contract).length;
+  const stats: { label: string; value: number; tone: StatTone; art: StatArtName; caption: string }[] = [
+    { label: "Active logistics partners", value: activeMitras.length, tone: "neutral", art: "truck", caption: "Registered and active" },
+    {
+      label: "Rate agreements (PKS) linked",
+      value: mitras.filter((m) => m.contract).length,
+      tone: "positive",
+      art: "documents",
+      caption: "Partners with a rate agreement",
+    },
+    {
+      label: "No rate agreement (PKS)",
+      value: withoutAgreement,
+      tone: withoutAgreement > 0 ? "warning" : "positive",
+      art: "alert",
+      caption: withoutAgreement > 0 ? "Needs a rate agreement" : "Every partner is covered",
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {stats.map((stat) => (
-          <div key={stat.label} className={cn(panel, "space-y-3 p-5")}>
-            <span className={label}>{stat.label}</span>
-            <div className={kpiValue}>{stat.value}</div>
-          </div>
+          <StatCard
+            key={stat.label}
+            label={stat.label}
+            value={stat.value}
+            caption={stat.caption}
+            tone={stat.tone}
+            art={stat.art}
+            loading={loading}
+          />
         ))}
       </div>
 

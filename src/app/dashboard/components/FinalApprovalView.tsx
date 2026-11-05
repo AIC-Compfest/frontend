@@ -8,6 +8,7 @@ import { formatIDR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StatCard } from "@/components/stats/StatCard";
 import {
   btnGhost,
   btnOutline,
@@ -17,8 +18,6 @@ import {
   focusRing,
   iconPlate,
   inputClass,
-  kpiValue,
-  label,
   panel,
   panelHeader,
   panelTitle,
@@ -217,18 +216,21 @@ export function FinalApprovalView({ onSelectTransaction, onRefresh, onNavigateTo
       {sodTab === "PENDING" && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className={cn(panel, "space-y-3 p-5")}>
-              <span className={label}>Total funds ready for release</span>
-              <div className={kpiValue}>{formatIDR(totalDisbursementSum)}</div>
-            </div>
-            <div className={cn(panel, "space-y-3 p-5")}>
-              <span className={label}>Clean matches</span>
-              <div className={kpiValue}>{items.length} invoices</div>
-            </div>
-            <div className={cn(panel, "space-y-3 p-5")}>
-              <span className={label}>Potential leakage prevented</span>
-              <div className={kpiValue}>{formatIDR(totalLeakageSum)}</div>
-            </div>
+            <StatCard
+              label="Total funds ready for release"
+              value={formatIDR(totalDisbursementSum)}
+              caption="Awaiting Finance Controller sign-off"
+              tone="neutral"
+              art="coins"
+            />
+            <StatCard
+              label="Clean matches"
+              value={`${items.length} invoices`}
+              caption="Matched to contract"
+              tone="positive"
+              art="seal"
+            />
+            <StatCard label="Potential leakage prevented" value={formatIDR(totalLeakageSum)} tone="positive" art="shield" />
           </div>
 
           <section className={cn(panel, "overflow-hidden")}>
@@ -343,18 +345,19 @@ export function FinalApprovalView({ onSelectTransaction, onRefresh, onNavigateTo
       {sodTab === "HISTORY" && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className={cn(panel, "space-y-3 p-5")}>
-              <span className={label}>Total funds disbursed</span>
-              <div className={kpiValue}>{formatIDR(totalDisbursementSum)}</div>
-            </div>
-            <div className={cn(panel, "space-y-3 p-5")}>
-              <span className={label}>Total invoices approved</span>
-              <div className={kpiValue}>{items.length} invoices</div>
-            </div>
-            <div className={cn(panel, "space-y-3 p-5")}>
-              <span className={label}>Financial leakage prevented</span>
-              <div className={kpiValue}>{formatIDR(totalLeakageSum)}</div>
-            </div>
+            <StatCard
+              label="Total funds disbursed"
+              value={formatIDR(totalDisbursementSum)}
+              tone="neutral"
+              art="coins"
+            />
+            <StatCard
+              label="Total invoices approved"
+              value={`${items.length} invoices`}
+              tone="positive"
+              art="seal"
+            />
+            <StatCard label="Financial leakage prevented" value={formatIDR(totalLeakageSum)} tone="positive" art="shield" />
           </div>
 
           <section className={cn(panel, "overflow-hidden")}>
